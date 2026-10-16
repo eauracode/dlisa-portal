@@ -1,0 +1,185 @@
+@import "tailwindcss";
+/* Colour tokens (burgundy + white, light and dark). Swap brand colours in this one file. */
+@import "../styles/theme-tokens.css";
+
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-surface: var(--surface);
+  --color-background: var(--background);
+  --color-sunken: var(--sunken);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-link: var(--link);
+  --color-on-brand: var(--on-brand);
+  --color-ring: var(--brand-500);
+  /* Status pairs: pale fill + dark text */
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-fg: var(--ok-fg);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-fg: var(--warn-fg);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-violet-bg: var(--violet-bg);
+  --color-violet-fg: var(--violet-fg);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-fg: var(--neutral-fg);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --shadow-card: 0 1px 2px rgb(63 0 20 / 0.06);
+}
+
+/* Base element styles live in the base layer so Tailwind utilities (e.g. text-on-brand on a
+   link styled as a button) can override them. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  a {
+    color: var(--link);
+    text-underline-offset: 2px;
+  }
+
+  /* Inputs stay 16px on phones so iOS does not zoom. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Chat bubbles shared by the student and staff conversation views. In the components layer so
+   Tailwind utilities can still override them. */
+@layer components {
+  .chat-body { scroll-behavior: smooth; }
+  .bubble-them, .bubble-me { max-width: min(80%, 540px); padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .bubble-them { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
+  .bubble-me { background: var(--brand-600); color: #fff; border-bottom-right-radius: 6px; }
+  .bubble-them .hint2 { display: block; font-size: 13px; color: var(--muted); margin-top: 6px; white-space: normal; }
+  .bubble-them .sum { display: block; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--sunken); font-size: 14px; white-space: normal; }
+  .bubble-them.update { border-left: 3px solid var(--brand-600); }
+  .bubble-them.official { border-left: 3px solid var(--violet-fg); }
+  .bubble-them.answer { border-left: 3px solid var(--ok-fg); }
+  .bubble-lab { display: block; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--link); margin-bottom: 3px; white-space: normal; }
+  .bubble-them.official .bubble-lab { color: var(--violet-fg); }
+  .bubble-them.answer .bubble-lab { color: var(--ok-fg); }
+  .sysp { align-self: center; display: inline-flex; gap: 6px; align-items: center; margin: 6px 0; padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 12px; text-align: center; }
+  .sysp b { color: var(--foreground); font-weight: 600; }
+  .daysep { align-self: center; margin: 8px 0 2px; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+  .msg-meta { display: block; padding: 0 4px 4px; color: var(--muted); font-size: 11px; }
+  .typing { display: inline-flex; gap: 4px; padding: 14px 16px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: dli-blink 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s }
+  .typing i:nth-child(3) { animation-delay: .3s }
+}
+@keyframes dli-blink { 50% { opacity: .25; transform: translateY(-2px); } }
+
+/* ===== Landing hero with blended photo ===== */
+.lp-hero {
+  --hero-base: #3F0014;
+  --hero-a: rgba(63, 0, 20, .92);
+  --hero-b: rgba(63, 0, 20, .55);
+  --hero-c: rgba(63, 0, 20, .18);
+  --hero-filter: saturate(.9) contrast(1.02);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--hero-base);
+  color: #fff;
+  padding: 200px 16px 0;               /* phones: room for the photo band */
+}
+
+/* Photo layer: phones = top band, small file */
+.lp-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  top: 0; left: 0; right: 0;
+  height: 320px;
+  background: url("/brand/hero-sm.webp") 68% 45% / cover no-repeat;
+  filter: var(--hero-filter);
+}
+
+/* Readability overlay: phones = fade down into burgundy */
+.lp-hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(to bottom,
+    var(--hero-c) 0, var(--hero-c) 90px, var(--hero-b) 170px, var(--hero-base) 300px);
+}
+
+/* Desktop: photo on the right 64%, fade from the left + bottom */
+@media (min-width: 860px) {
+  .lp-hero { padding: 40px 16px 0; }
+  .lp-hero::before {
+    left: auto; bottom: 0; height: auto; width: 64%;
+    background-image: url("/brand/hero.webp");
+    background-position: center 30%;
+  }
+  .lp-hero::after {
+    background:
+      linear-gradient(to top, var(--hero-base) 0, var(--hero-base) 96px, transparent 260px),
+      linear-gradient(90deg, var(--hero-base) 0%, var(--hero-base) 36%,
+        var(--hero-a) 46%, var(--hero-b) 62%, var(--hero-c) 100%);
+  }
+  .lp-hero-grid { min-height: 480px; }
+}
+
+/* Dark mode: dimmer photo, near-black burgundy overlay */
+:root[data-theme="dark"] .lp-hero {
+  --hero-base: #1C080E; --hero-a: rgba(28, 8, 14, .95); --hero-b: rgba(28, 8, 14, .7);
+  --hero-c: rgba(28, 8, 14, .38); --hero-filter: saturate(.7) brightness(.72);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lp-hero {
+    --hero-base: #1C080E; --hero-a: rgba(28, 8, 14, .95); --hero-b: rgba(28, 8, 14, .7);
+    --hero-c: rgba(28, 8, 14, .38); --hero-filter: saturate(.7) brightness(.72);
+  }
+}
+
+/* Public header matches the hero in dark mode (no colour seam) */
+:root[data-theme="dark"] .lp-header { background: #1C080E; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lp-header { background: #1C080E; }
+}
+
+/* Small chat preview card (desktop only) */
+.lp-hero-chat { display: none; }
+@media (min-width: 860px) {
+  .lp-hero-chat {
+    display: flex; flex-direction: column; gap: 6px;
+    max-width: 270px; justify-self: start; align-self: end;
+    margin: 0 0 4px 0; padding: 12px; /* no left overlap: the longer button label needs the room */
+    background: #fff; color: #1E1416; border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .35); transform: rotate(-1.5deg);
+  }
+}
+.lp-hero-chat .b { max-width: 82%; padding: 9px 13px; border-radius: 16px; font-size: 13px; line-height: 1.4; }
+.lp-hero-chat .t { align-self: flex-start; background: #FAF6F7; border: 1px solid #EFE7E9; border-bottom-left-radius: 5px; }
+.lp-hero-chat .m { align-self: flex-end; background: #700023; color: #fff; border-bottom-right-radius: 5px; }
+.lp-hero-chat .u { border-left: 3px solid #700023; }
+.lp-hero-chat .u b { display: block; font-size: 10px; letter-spacing: .05em; color: #58001B; }
+.lp-hero-chat .pill { align-self: center; font-size: 11px; color: #665A5D; border: 1px solid #EFE7E9; border-radius: 999px; padding: 3px 10px; }
+
+@media (prefers-reduced-motion: reduce) { .lp-hero-chat { transform: none; } }

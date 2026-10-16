@@ -1,0 +1,42 @@
+{
+  "description": "Labelled DLI complaint examples for measuring grouping accuracy and false merges. Items are replayed in order; 'group' is the gold underlying problem. 'hardNegatives' lists group pairs that look alike but must never be merged automatically.",
+  "hardNegatives": [
+    ["exam-timetable-missing", "fin231-timetable-wrong-date"],
+    ["acc201-result-missing", "acc201-result-wrong"],
+    ["acc201-result-missing", "bus105-result-missing"],
+    ["yaba-no-power", "ikeja-no-power"],
+    ["lms-inaccessible", "bus105-material-missing"]
+  ],
+  "items": [
+    { "group": "exam-timetable-missing", "category": "exams-results", "text": "Our exam timetable is not out." },
+    { "group": "lms-inaccessible", "category": "materials", "text": "The LMS portal has not been loading since Monday. I cannot access my course materials or submit assignments." },
+    { "group": "acc201-result-missing", "category": "exams-results", "text": "My ACC 201 result for first semester 2025/2026 is not showing on the portal. Other courses are there." },
+    { "group": "exam-timetable-missing", "category": "exams-results", "text": "We haven't received the schedule for our examinations." },
+    { "group": "fin231-timetable-wrong-date", "category": "exams-results", "text": "The FIN 231 exam timetable contains an incorrect examination date." },
+    { "group": "yaba-no-power", "category": "facilities", "text": "There is no electricity at the Yaba study centre during weekend tutorials. We sit in the dark." },
+    { "group": "lms-inaccessible", "category": "materials", "text": "I can't log in to the e-learning portal, it keeps failing every time I try to open my course materials." },
+    { "group": "remita-not-reflecting", "category": "admin-services", "text": "I paid my school fees through Remita two weeks ago but the payment is not reflecting on my portal." },
+    { "group": "acc201-result-wrong", "category": "exams-results", "text": "My ACC 201 result is wrong. I scored much higher than the grade that was uploaded for first semester 2025/2026." },
+    { "group": "exam-timetable-missing", "category": "exams-results", "text": "Examination timetable has still not been published and exams are supposed to start soon." },
+    { "group": "harassment", "category": "welfare", "text": "A staff member keeps harassing female students after evening tutorials at the study centre." },
+    { "group": "acc201-result-missing", "category": "exams-results", "text": "ACC 201 results for first semester 2025/2026 have not been uploaded. Please help." },
+    { "group": "suggestion-record-tutorials", "category": "suggestions", "text": "It would be good if weekend tutorials were recorded and uploaded for students who work on Saturdays." },
+    { "group": "bus105-result-missing", "category": "exams-results", "text": "My BUS 105 result for first semester 2025/2026 is not showing on the portal." },
+    { "group": "yaba-no-power", "category": "facilities", "text": "Yaba study centre has no power on Saturdays. The generator is never switched on." },
+    { "group": "fin231-timetable-wrong-date", "category": "exams-results", "text": "Wrong date on the FIN 231 exam timetable. It says Sunday, which cannot be correct." },
+    { "group": "eco201-lecturer-absent", "category": "academic", "text": "The ECO 201 facilitator has not come to class for three weeks now." },
+    { "group": "lms-inaccessible", "category": "materials", "text": "The LMS is down. I am unable to open course materials or submit my assignment." },
+    { "group": "ikeja-no-power", "category": "facilities", "text": "There is no electricity at the Ikeja study centre during weekend tutorials." },
+    { "group": "remita-not-reflecting", "category": "admin-services", "text": "My Remita fee payment has not reflected on the student portal after one week, so I cannot register courses." },
+    { "group": "bus105-material-missing", "category": "materials", "text": "The BUS 105 course material has not been distributed at the study centre and it is not online." },
+    { "group": "harassment", "category": "welfare", "text": "One of the officials at the centre has been harassing students and making them feel unsafe." },
+    { "group": "suggestion-record-tutorials", "category": "suggestions", "text": "Please consider recording tutorials so those of us who work on weekends can watch them later." },
+    { "group": "eco201-lecturer-absent", "category": "academic", "text": "ECO 201 lecturer has been absent from lectures for weeks and nobody has told us why." },
+    { "group": "acc201-result-wrong", "category": "exams-results", "text": "There is an error in my ACC 201 grade for first semester 2025/2026. The score is lower than what I got." },
+    { "group": "bus105-material-missing", "category": "materials", "text": "We have not received BUS 105 handouts this semester. Exams are in four weeks." },
+    { "group": "exam-timetable-missing", "category": "exams-results", "text": "We still don't have the exam timetable for next week." },
+    { "group": "yaba-no-power", "category": "facilities", "text": "No light in Yaba centre classrooms during tutorials, it is too dark to read." },
+    { "group": "lms-inaccessible", "category": "materials", "text": "Since Monday the LMS portal will not open, so I cannot see course materials." },
+    { "group": "acc201-result-missing", "category": "exams-results", "text": "My ACC 201 score for first semester 2025/2026 is missing. The result is not available on the portal." }
+  ]
+}

@@ -1,0 +1,204 @@
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { closePool, one, pool } from "@/lib/db";
+import { getStudentComplaint, listMyComplaints, requestComplaintReview, submitComplaint } from "@/lib/services/student-complaints";
+import { assignOfficer, changeStatus, setPublicVisibility } from "@/lib/services/admin/issues";
+import { getStudentMessagesOverview, getUnreadMessageCount, sendMessage } from "@/lib/services/messages";
+import { countUnreadForStaff, getStaffConversation, listConversations, sendStaffReply, sendStudentReply } from "@/lib/services/conversations";
+import { buildStudentThread, loadStudentThread } from "@/lib/services/student-thread";
+import { archiveMemo, countUnreadMemos, createMemo, getMemoFeed, listMemosForStaff, mergeMemoFeed, publishDraft, type MemoCard } from "@/lib/services/memos";
+import { getInstantAnswers } from "@/lib/services/instant-answers";
+import { ForbiddenError } from "@/lib/auth/permissions";
+import { NotFoundError } from "@/lib/services/admin/context";
+import { registerStudent } from "@/lib/auth/student-auth";
+import { categoryId, complaintRow, makeAdmin, makeStudent, resetData } from "../support/db";
+import { basis, resetAI, useFakeAI } from "../support/fake-ai";
+
+beforeEach(async () => {
+  await resetData();
+  useFakeAI({ lms: basis(0), fees: basis(1) });
+});
+afterAll(async () => {
+  resetAI();
+  await closePool();
+});
+
+let n = 0;
+async function report(studentId: string, text = "#lms The LMS portal is not loading at all.") {
+  n += 1;
+  const r = await submitComplaint(studentId, { categoryId: await categoryId("materials"), subject: `Report ${n}`, description: `${text} (${n})` }, `cm-${studentId}-${n}`);
+  if (!r.ok) throw new Error(r.error);
+  return r.complaintId;
+}
+
+async function auditCount(action: string) {
+  return (await one<{ n: number }>(pool(), `select count(*)::int as n from audit_logs where action = $1`, [action]))!.n;
+}
+
+describe("the student conversation", () => {
+  const base = {
+    complaint: { createdAt: new Date("2026-10-01T09:00:00Z"), description: "x", matchStatus: "auto_matched" },
+    publishedUpdates: [],
+    statusHistory: [],
+    dateHistory: [],
+    messages: [],
+    answers: [],
+    reviewRequests: [],
+    reviewResponses: [],
+  };
+
+  it("says other students reported it only while the issue is unresolved", () => {
+    const at = new Date("2026-10-01T09:01:00Z");
+    const open = buildStudentThread({ ...base, issue: { status: "in_progress", groupedAt: at } });
+    expect(open.some((e) => e.type === "grouped")).toBe(true);
+    for (const status of ["resolved", "closed", "merged"]) {
+      expect(buildStudentThread({ ...base, issue: { status, groupedAt: at } }).some((e) => e.type === "grouped")).toBe(false);
+    }
+    // A submission that started its own issue was not "added to" anything.
+    expect(buildStudentThread({ ...base, complaint: { ...base.complaint, matchStatus: "new_issue" }, issue: { status: "new", groupedAt: at } }).some((e) => e.type === "grouped")).toBe(false);
+  });
+
+  it("lets a student write only in their own complaint's chat", async () => {
+    const [owner, other] = [await makeStudent(), await makeStudent()];
+    const id = await report(owner);
+    expect(await sendStudentReply(owner, id, "Any news on this?")).toEqual({ ok: true });
+    expect(await sendStudentReply(other, id, "Hijack")).toEqual({ ok: false, error: "not_found" });
+    expect(await auditCount("complaint.message_sent")).toBe(1);
+  });
+
+  it("delivers staff replies to that student only, and tracks reads both ways", async () => {
+    const admin = await makeAdmin("union_admin");
+    const [owner, bystander] = [await makeStudent(), await makeStudent()];
+    const id = await report(owner);
+    await report(bystander); // same issue
+    await sendStudentReply(owner, id, "Is anyone looking at this?");
+    expect(await countUnreadForStaff(pool(), admin)).toBe(1);
+
+    const convo = await getStaffConversation(admin, id);
+    expect(convo.reporter).toMatch(/^Reporter [0-9A-F]{6}$/);
+    const username = (await one<{ username: string }>(pool(), `select username from students where id = $1`, [owner]))!.username;
+    expect(JSON.stringify(convo)).not.toContain(username); // staff see a reporter code, never the username
+    expect(await countUnreadForStaff(pool(), admin)).toBe(0);
+
+    await sendStaffReply(admin, id, "Yes, the ICT unit is on it.");
+    expect(await getUnreadMessageCount(owner)).toBeGreaterThanOrEqual(1);
+    expect(await getUnreadMessageCount(bystander)).toBe(0);
+
+    const detail = (await getStudentComplaint(owner, id))!;
+    const thread = await loadStudentThread(owner, detail.complaint, detail.issue);
+    expect(thread.filter((e) => e.type === "message").map((e) => (e as { body: string }).body)).toEqual(["Is anyone looking at this?", "Yes, the ICT unit is on it."]);
+    expect(await getUnreadMessageCount(owner)).toBe(0); // reading the thread reads it
+    expect(await auditCount("complaint.staff_reply")).toBe(1);
+  });
+
+  it("allows staff replies only from roles and issues the staff member may handle", async () => {
+    const [admin, officer, oversight] = [await makeAdmin("union_admin"), await makeAdmin("case_officer"), await makeAdmin("oversight_officer")];
+    const id = await report(await makeStudent());
+    await expect(sendStaffReply(oversight, id, "Hello")).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(sendStaffReply(officer, id, "Hello")).rejects.toBeInstanceOf(NotFoundError); // not assigned
+    await assignOfficer(admin, (await complaintRow(id))!.consolidated_issue_id!, officer.id);
+    await sendStaffReply(officer, id, "Hello from your case officer.");
+    expect((await listConversations(pool(), officer)).map((c) => c.complaint_id)).toEqual([id]);
+  });
+
+  it("puts a review request's reason into the conversation for staff", async () => {
+    const admin = await makeAdmin("union_admin");
+    const s = await makeStudent();
+    const id = await report(s);
+    await changeStatus(admin, (await complaintRow(id))!.consolidated_issue_id!, "resolved", "The LMS was restored.");
+    expect((await requestComplaintReview(s, id, "It broke again this morning.")).ok).toBe(true);
+    const convo = await getStaffConversation(admin, id);
+    expect(convo.messages.map((m) => [m.body, m.is_review_request])).toEqual([["It broke again this morning.", true]]);
+  });
+});
+
+describe("memos", () => {
+  it("only Union Admins publish; Case Officers save drafts that students never see", async () => {
+    const [admin, officer] = [await makeAdmin("union_admin"), await makeAdmin("case_officer")];
+    const early = await makeStudent();
+    await expect(createMemo(officer, { title: "Exam week", body: "#lms Exams start Monday.", pinned: false, public: false, publish: true })).rejects.toBeInstanceOf(ForbiddenError);
+    const draft = await createMemo(officer, { title: "Exam week", body: "#lms Exams start Monday.", pinned: false, public: false, publish: false });
+    expect(await getMemoFeed(early, "notice")).toEqual([]);
+    // A draft is never used as an instant answer.
+    const asker = await makeStudent();
+    expect(await getInstantAnswers(asker, await report(asker))).toEqual([]);
+
+    await expect(publishDraft(officer, draft)).rejects.toBeInstanceOf(ForbiddenError);
+    await publishDraft(admin, draft);
+    expect((await getMemoFeed(early, "notice")).map((c) => c.id)).toEqual([draft]);
+    expect(await auditCount("memo.published")).toBe(1);
+  });
+
+  it("shows published memos to students who joined later, with New until opened", async () => {
+    const admin = await makeAdmin("union_admin");
+    await makeStudent();
+    const id = await createMemo(admin, { title: "Library hours", body: "The study centre opens at 8am.", pinned: true, public: false, publish: true });
+    const late = await makeStudent();
+    expect(await countUnreadMemos(late)).toBe(1);
+    const first = await getMemoFeed(late, "all");
+    expect(first[0]).toMatchObject({ kind: "notice", id, pinned: true, isNew: true });
+    expect(await countUnreadMemos(late)).toBe(0);
+    expect((await getMemoFeed(late, "all"))[0]).toMatchObject({ isNew: false });
+    expect((await listMemosForStaff(pool(), admin))[0].seen).toBe(1);
+  });
+
+  it("shows signed-out visitors only public memos, and archived memos to nobody", async () => {
+    const admin = await makeAdmin("union_admin");
+    await makeStudent();
+    const priv = await createMemo(admin, { title: "Students only", body: "For students only.", pinned: false, public: false, publish: true });
+    const pub = await createMemo(admin, { title: "Open notice", body: "For everyone to see.", pinned: false, public: true, publish: true });
+    expect((await getMemoFeed(null, "notice")).map((c) => c.id)).toEqual([pub]);
+    await archiveMemo(admin, pub);
+    expect(await getMemoFeed(null, "notice")).toEqual([]);
+    const s = await makeStudent();
+    expect((await getMemoFeed(s, "notice")).map((c) => c.id)).toEqual([priv]);
+  });
+
+  it("lists only unresolved public issues, never sensitive ones, and never any counts", async () => {
+    const admin = await makeAdmin("union_admin");
+    const issueId = (await complaintRow(await report(await makeStudent())))!.consolidated_issue_id!;
+    await report(await makeStudent());
+    await setPublicVisibility(admin, issueId, { visible: true, publicTitle: "LMS access problems", publicSummary: "Students cannot reach the LMS." });
+    const s = await makeStudent();
+    const cards = await getMemoFeed(s, "issue");
+    expect(cards.map((c) => c.id)).toEqual([issueId]);
+    for (const key of Object.keys(cards[0])) expect(key).not.toMatch(/count|reporter|submission|students/i);
+    await changeStatus(admin, issueId, "resolved", "Restored.");
+    expect(await getMemoFeed(s, "issue")).toEqual([]);
+    await pool().query(`update consolidated_issues set status = 'in_progress', sensitive = true where id = $1`, [issueId]);
+    expect(await getMemoFeed(s, "issue")).toEqual([]);
+  });
+
+  it("puts pinned notices first, then newest first", () => {
+    const notice = (id: string, pinned: boolean, at: string): MemoCard => ({ kind: "notice", id, title: id, body: "", pinned, publishedAt: new Date(at), isNew: false });
+    const issue: MemoCard = { kind: "issue", id: "i", title: "i", summary: "", category: "", status: "new", latest: null, expectedAt: null, updatedAt: new Date("2026-10-03") };
+    const feed = mergeMemoFeed([notice("old-pin", true, "2026-09-01"), notice("new", false, "2026-10-02")], [issue], "all");
+    expect(feed.map((c) => c.id)).toEqual(["old-pin", "i", "new"]);
+    expect(mergeMemoFeed([notice("a", false, "2026-10-01")], [issue], "issue").map((c) => c.id)).toEqual(["i"]);
+  });
+});
+
+describe("bulk messages", () => {
+  it("reach a department, or students with an open complaint, and land in Messages", async () => {
+    const admin = await makeAdmin("union_admin");
+    const fin = (await registerStudent({ username: `fin${Date.now() % 100000}`, department: "FIN" })) as { ok: true; studentId: string };
+    const acc = (await registerStudent({ username: `acc${Date.now() % 100000}`, department: "ACC" })) as { ok: true; studentId: string };
+    const res = await sendMessage(admin, { type: "department", department: "FIN" }, { subject: "Finance students", body: "A note for Finance students." });
+    expect(res.recipients).toBe(1);
+    expect((await getStudentMessagesOverview(fin.studentId)).general.map((m) => m.subject)).toEqual(["Finance students"]);
+    expect((await getStudentMessagesOverview(acc.studentId)).general).toEqual([]);
+
+    await report(acc.studentId);
+    const open = await sendMessage(admin, { type: "open_complaints" }, { subject: "Open cases", body: "We are working through open cases." });
+    expect(open.recipients).toBe(1);
+    const officer = await makeAdmin("case_officer");
+    await expect(sendMessage(officer, { type: "department", department: "FIN" }, { subject: "Nope", body: "Not allowed." })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("never sends counts to the student complaint list", async () => {
+    const s = await makeStudent();
+    await report(s);
+    await report(await makeStudent());
+    const [row] = await listMyComplaints(s);
+    for (const key of Object.keys(row)) expect(key).not.toMatch(/count|reporter/i);
+  });
+});

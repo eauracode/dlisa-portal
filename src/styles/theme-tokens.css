@@ -1,0 +1,67 @@
+/*
+ * DLI Support Portal — colour tokens (burgundy #700023 + white)
+ * Same slot names as the existing app, so this replaces the current token block.
+ * Light by default; dark follows the device unless the user picks one
+ * (the ThemeToggle sets <html data-theme="light|dark">).
+ */
+:root {
+  --brand-50:  #FBF3F5;  /* tinted backgrounds, hover, latest-update boxes */
+  --brand-100: #F4E2E7;  /* hover on tinted areas, brand tag fill */
+  --brand-200: #E3B9C5;  /* highlighted borders */
+  --brand-500: #A3324F;  /* focus ring */
+  --brand-600: #700023;  /* primary buttons, receipt band */
+  --brand-700: #58001B;  /* links, primary hover */
+  --brand-800: #3F0014;  /* stats banner, staff sidebar */
+
+  --background: #FFFFFF;
+  --surface:    #FFFFFF;
+  --sunken:     #FAF6F7; /* NEW: footer, table headers, staff page bg */
+  --foreground: #1E1416;
+  --muted:      #665A5D;
+  --border:     #E7DFE1;
+  --border-strong: #8C7F83; /* NEW: input/button borders (3:1+) */
+  --link:       var(--brand-700); /* NEW */
+  --on-brand:   #FFFFFF;          /* NEW */
+
+  /* status pairs: pale fill + dark text, all >= 4.5:1 */
+  --info-bg:#E8F1FB;    --info-fg:#12487A;
+  --ok-bg:#E4F3E9;      --ok-fg:#1B5A31;
+  --warn-bg:#FDF2D8;    --warn-fg:#6E4500;
+  --danger-bg:#FBE7E6;  --danger-fg:#9E1C14;
+  --violet-bg:#EEE9FB;  --violet-fg:#4A2E94;
+  --neutral-bg:#F0ECED; --neutral-fg:#4A4245;
+
+  color-scheme: light;
+}
+
+/* Dark values, used for (a) device dark mode with no explicit choice, (b) explicit choice. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --brand-50:#2B171C; --brand-100:#3A1D25; --brand-200:#5E2A39; --brand-500:#E07A95;
+    --brand-600:#8A0A30; --brand-700:#F2A7BB; --brand-800:#3F0014;
+    --background:#160E10; --surface:#21161A; --sunken:#1B1215;
+    --foreground:#F5EDEF; --muted:#BDADB2; --border:#3A2B30; --border-strong:#8F7C82;
+    --link:#F2A7BB;
+    --info-bg:#132B44; --info-fg:#A9CFF5; --ok-bg:#11301D; --ok-fg:#9EDDB3;
+    --warn-bg:#3A2A08; --warn-fg:#F4D08A; --danger-bg:#3F1513; --danger-fg:#F6ADA7;
+    --violet-bg:#271C47; --violet-fg:#C9B9F7; --neutral-bg:#2C2326; --neutral-fg:#D3C7CA;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --brand-50:#2B171C; --brand-100:#3A1D25; --brand-200:#5E2A39; --brand-500:#E07A95;
+  --brand-600:#8A0A30; --brand-700:#F2A7BB; --brand-800:#3F0014;
+  --background:#160E10; --surface:#21161A; --sunken:#1B1215;
+  --foreground:#F5EDEF; --muted:#BDADB2; --border:#3A2B30; --border-strong:#8F7C82;
+  --link:#F2A7BB;
+  --info-bg:#132B44; --info-fg:#A9CFF5; --ok-bg:#11301D; --ok-fg:#9EDDB3;
+  --warn-bg:#3A2A08; --warn-fg:#F4D08A; --danger-bg:#3F1513; --danger-fg:#F6ADA7;
+  --violet-bg:#271C47; --violet-fg:#C9B9F7; --neutral-bg:#2C2326; --neutral-fg:#D3C7CA;
+  color-scheme: dark;
+}
+
+/* Global focus ring + reduced motion */
+:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
