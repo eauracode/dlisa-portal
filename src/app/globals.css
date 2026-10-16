@@ -151,18 +151,9 @@
   --hero-base: #1C080E; --hero-a: rgba(28, 8, 14, .95); --hero-b: rgba(28, 8, 14, .7);
   --hero-c: rgba(28, 8, 14, .38); --hero-filter: saturate(.7) brightness(.72);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .lp-hero {
-    --hero-base: #1C080E; --hero-a: rgba(28, 8, 14, .95); --hero-b: rgba(28, 8, 14, .7);
-    --hero-c: rgba(28, 8, 14, .38); --hero-filter: saturate(.7) brightness(.72);
-  }
-}
 
 /* Public header matches the hero in dark mode (no colour seam) */
 :root[data-theme="dark"] .lp-header { background: #1C080E; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .lp-header { background: #1C080E; }
-}
 
 /* Small chat preview card (desktop only) */
 .lp-hero-chat { display: none; }

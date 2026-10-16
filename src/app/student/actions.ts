@@ -234,7 +234,7 @@ export async function checkReturningUsernameAction(username: string): Promise<Re
 export interface ChatStatus {
   state: "checking" | "grouped" | "done";
   message: string;
-  answers: { subject: string; body: string }[];
+  answers: { messageId: string; subject: string; body: string }[];
 }
 
 /** Chat: the same fixed status wording the conversation page shows, plus any instant answers. */
@@ -247,7 +247,7 @@ export async function chatStatusAction(complaintId: string): Promise<ChatStatus 
   const message = studentStatusMessage({ matchStatus: complaint.match_status, complaintStatus: complaint.status, issue })?.text ?? COPY.acknowledgement;
   if (complaint.match_status === "pending") return { state: "checking", message, answers: [] };
   const grouped = ["auto_matched", "manual"].includes(complaint.match_status) && issueIsUnresolved(issue?.status);
-  const answers = (await getInstantAnswers(student.id, complaintId)).map((a) => ({ subject: a.subject, body: a.body }));
+  const answers = (await getInstantAnswers(student.id, complaintId)).map((a) => ({ messageId: a.message_id, subject: a.subject, body: a.body }));
   return { state: grouped ? "grouped" : "done", message, answers };
 }
 
@@ -283,3 +283,37 @@ export async function requestReviewFormAction(fd: FormData) {
   revalidatePath(back);
   redirect(res.ok ? `${back}?review=sent#latest` : `${back}?reviewErr=${res.error}#review`);
 }
+
+/**
+ * Chat: "Helpful" / "Not helpful" on an instant answer, without leaving the page. Helpful
+ * resolves the submission (as on the conversation page). Ownership is enforced by RLS.
+ */
+export async function chatAnswerFeedbackAction(complaintId: string, messageIds: string[], helpful: boolean): Promise<boolean> {
+  const student = await getCurrentStudent();
+  const ids = messageIds.filter((m) => uuidSchema.safeParse(m).success).slice(0, 5);
+  if (!student || !uuidSchema.safeParse(complaintId).success || ids.length === 0) return false;
+  if (helpful) {
+    const ok = await confirmAnswerResolved(student.id, complaintId, ids[0]);
+    for (const id of ids.slice(1)) await recordAnswerFeedback(student.id, complaintId, id, true);
+    revalidatePath("/student", "layout");
+    return ok;
+  }
+  for (const id of ids) await recordAnswerFeedback(student.id, complaintId, id, false);
+  return true;
+}
+
+/** Chat: what the student still needs after an unhelpful answer, sent into the complaint's conversation for staff. */
+export async function chatFollowUpAction(complaintId: string, body: string): Promise<{ ok: boolean; message?: string }> {
+  const student = await getCurrentStudent();
+  if (!student || !uuidSchema.safeParse(complaintId).success) return { ok: false, message: "Please sign in again." };
+  const res = await sendStudentReply(student.id, complaintId, body);
+  if (res.ok) return { ok: true };
+  const messages = {
+    rate_limited: "You have sent several messages in the last hour. Please wait a little before sending another.",
+    closed: "This complaint is closed, so new messages can't be added.",
+    empty: "Write a message first (up to 2,000 characters).",
+    not_found: "This complaint could not be found.",
+  };
+  return { ok: false, message: messages[res.error] };
+}
+

@@ -16,7 +16,8 @@ const schema = z.object({
   // Optional LLM that double-checks candidate matches; defaults to the classifier provider.
   AI_VERIFIER_PROVIDER: z.enum(["local", "openai", "anthropic"]).optional(),
   LOCAL_EMBEDDING_MODEL: z.string().default("Xenova/all-MiniLM-L6-v2"),
-  MODEL_CACHE_DIR: z.string().default("./.models"),
+  // Vercel functions can only write to /tmp; the model is re-downloaded there after a cold start.
+  MODEL_CACHE_DIR: z.string().default(process.env.VERCEL ? "/tmp/dli-models" : "./.models"),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),

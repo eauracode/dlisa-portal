@@ -29,6 +29,20 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["pg", "@huggingface/transformers", "onnxruntime-node"],
+  // The embedding runtime ships binaries for every platform (~290 MB). Hosted functions run on
+  // Linux x64, so the rest are left out to stay under Vercel's 250 MB function size limit.
+  outputFileTracingExcludes: {
+    "/**": [
+      "node_modules/onnxruntime-node/bin/napi-v*/darwin/**",
+      "node_modules/onnxruntime-node/bin/napi-v*/win32/**",
+      "node_modules/onnxruntime-node/bin/napi-v*/linux/arm64/**",
+      "node_modules/onnxruntime-web/**",
+    ],
+  },
+  // The runtime's native binary is loaded dynamically, so tracing cannot find it on its own.
+  outputFileTracingIncludes: {
+    "/**": ["node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**"],
+  },
   turbopack: {
     rules: {
       "*.css": {

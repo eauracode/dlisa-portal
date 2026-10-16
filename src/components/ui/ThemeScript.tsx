@@ -1,7 +1,7 @@
 import Script from "next/script";
 
 // Applies a saved theme before first paint so there is no light/dark flash. With no saved
-// choice, CSS follows the device. next/script's beforeInteractive injects it into the
+// choice the page stays light (the device setting is not followed). next/script's beforeInteractive injects it into the
 // initial HTML ahead of hydration (a raw <script> element triggers a React 19 warning).
 const code = `(function(){try{var t=localStorage.getItem('dli-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}})();`;
 

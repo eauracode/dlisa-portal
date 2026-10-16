@@ -53,8 +53,3 @@ export class TransformersEmbedder implements EmbeddingProvider {
     return vector;
   }
 }
-
-/** Load the model ahead of the first complaint (used by the worker and health checks). */
-export async function warmUpTransformers(model: string, cacheDir: string) {
-  await loadExtractor(model, path.resolve(cacheDir));
-}

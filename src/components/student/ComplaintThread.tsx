@@ -203,7 +203,7 @@ function Event({ e, complaintId }: { e: ThreadEvent; complaintId: string }) {
       );
     case "answer":
       return (
-        <Them label="Answered before" tone="answer" meta={`DLI Student Union · ${t} · ${ANSWER_SOURCE[e.audience] ?? "Earlier answer"}`}>
+        <Them tone="answer" meta={`DLI Student Union · ${t} · ${ANSWER_SOURCE[e.audience] ?? "Earlier answer"}`}>
           <b className="block">{e.subject}</b>
           {e.body}
           <span className="mt-3 block border-t border-[var(--border)] pt-2.5 [white-space:normal]">

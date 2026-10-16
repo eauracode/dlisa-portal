@@ -12,7 +12,7 @@ type NavKey = "dashboard" | "complaints" | "messages" | "memos";
 const NAV: { key: NavKey; href: string; label: string; short: string; icon: IconName; match?: string[]; exact?: boolean }[] = [
   { key: "dashboard", href: "/student/dashboard", label: "Home", short: "Home", icon: "home" },
   { key: "complaints", href: "/student/complaints", label: "Complaints & suggestions", short: "Mine", icon: "list" },
-  { key: "messages", href: "/student/messages", label: "Messages", short: "Messages", icon: "chat" },
+  { key: "messages", href: "/student/messages", label: "Notifications", short: "Notifications", icon: "bell" },
   { key: "memos", href: "/memos", label: "Memos", short: "Memos", icon: "memo" },
 ];
 
@@ -105,7 +105,7 @@ export function StudentShell(props: { username: string; department: string | nul
           <ThemeToggle />
           <Link
             href="/student/messages"
-            aria-label={props.unreadMessages ? `Messages, ${props.unreadMessages} unread` : "Messages"}
+            aria-label={props.unreadMessages ? `Notifications, ${props.unreadMessages} unread` : "Notifications"}
             className="relative grid h-10 w-10 place-items-center rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--brand-50)]"
           >
             <Icon name="bell" />

@@ -81,7 +81,7 @@ export default async function StudentHomePage({ searchParams }: { searchParams: 
           <ul className="grid">
             {[
               { href: "/student/complaints/new", icon: "plus" as const, label: "Start a complaint or suggestion", n: 0 },
-              { href: "/student/messages", icon: "chat" as const, label: "Messages", n: unreadMessages },
+              { href: "/student/messages", icon: "bell" as const, label: "Notifications", n: unreadMessages },
               { href: "/memos", icon: "memo" as const, label: "Union memos", n: unreadMemos },
               { href: "/privacy", icon: "shield" as const, label: "How your privacy works", n: 0 },
             ].map((l) => (

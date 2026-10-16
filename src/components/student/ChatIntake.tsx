@@ -4,11 +4,13 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { DEPARTMENTS } from "@/lib/departments";
-import { DESCRIPTION_MAX, DESCRIPTION_MIN } from "@/lib/validation";
+import { DESCRIPTION_MAX, DESCRIPTION_MIN } from "@/lib/limits";
 import {
   chatStatusAction,
   checkReturningUsernameAction,
   checkUsernameAction,
+  chatAnswerFeedbackAction,
+  chatFollowUpAction,
   submitChatComplaintAction,
 } from "@/app/student/actions";
 import { BotAvatar } from "./ChatBits";
@@ -20,7 +22,8 @@ import { BotAvatar } from "./ChatBits";
  */
 
 const USERNAME_HINT = "3–24 letters, numbers, dots, hyphens or underscores. If you want to stay anonymous, avoid your real name or matric number.";
-const AI_CHECKING = "Your submission has been received. We are checking whether other students have reported the same issue — this page updates automatically.";
+const THANKS = "Thank you for reaching out. If you have any other issues or feedback, do not hesitate to reach out.";
+const SUBMITTED = "Your submission has been received, and is being redirected to the right office as we speak — this page updates automatically.";
 const VALID = /^[A-Za-z0-9._-]{3,24}$/;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -28,7 +31,7 @@ type Msg = { id: number; from: "bot" | "me" | "sys"; node: React.ReactNode };
 type Step =
   | { kind: "chips"; options: string[]; primaryFirst?: boolean }
   | { kind: "username"; mode: "new" | "returning" }
-  | { kind: "text" }
+  | { kind: "text"; min?: number; max?: number }
   | { kind: "none" };
 type ChatState = { msgs: Msg[]; step: Step; stepKey: number; typing: boolean };
 
@@ -40,6 +43,8 @@ type ChatState = { msgs: Msg[]; step: Step; stepKey: number; typing: boolean };
 const INITIAL: ChatState = { msgs: [], step: { kind: "none" }, stepKey: 0, typing: false };
 let chat: ChatState = INITIAL;
 let running = false;
+// Set when the chat has finished on this page; the next visit to the page starts afresh.
+let ended = false;
 let resolver: ((v: string) => void) | null = null;
 let nextId = 0;
 const listeners = new Set<() => void>();
@@ -58,14 +63,13 @@ function subscribe(l: () => void) {
 }
 
 const push = (from: Msg["from"], node: React.ReactNode) => update({ msgs: [...chat.msgs, { id: ++nextId, from, node }] });
-async function bot(node: React.ReactNode, delay = 500) {
+async function bot(node: React.ReactNode, delay = 250) {
   update({ typing: true });
   await wait(delay);
   update({ typing: false });
   push("bot", node);
 }
 const me = (text: string) => push("me", text);
-const sys = (text: string) => push("sys", text);
 function ask(s: Step) {
   return new Promise<string>((res) => {
     resolver = res;
@@ -78,6 +82,12 @@ function answer(v: string) {
   resolver = null;
   r?.(v);
 }
+/** The conversation is over: no more prompts; the next visit starts a fresh chat. */
+function end() {
+  ended = true;
+  update({ step: { kind: "none" } });
+}
+
 /** Finished: the next visit to the page starts a fresh conversation. */
 function finish(href: string) {
   running = false;
@@ -101,7 +111,7 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
   await wait(0);
   const fd = new FormData();
   if (!opts.signedInAs) {
-    await bot("Hi! I'll help you send a complaint or suggestion to the DLI Student Union. It takes under a minute.", 300);
+    await bot("Hi! I'll help you send a complaint or suggestion to the DLI Student Union. It takes under a minute.", 150);
     await bot("First, are you new here?");
     const c = await ask({ kind: "chips", options: ["I'm new here", "I have a username"] });
     me(c);
@@ -129,7 +139,7 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
     }
     await bot("What's it about?");
   } else {
-    await bot(`Hi ${opts.signedInAs}. What would you like to tell the Student Union about?`, 300);
+    await bot(`Hi ${opts.signedInAs}. What would you like to tell the Student Union about?`, 150);
     if (opts.needsDepartment) {
       fd.set("department", await askDepartment());
       await bot("Thanks. What's it about?");
@@ -191,26 +201,42 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
     return;
   }
 
-  await bot(AI_CHECKING, 200);
+  // The typing indicator stands in for a status message while matching runs.
+  update({ typing: true });
   let status = await chatStatusAction(res.complaintId);
   for (let i = 0; i < 10 && status?.state === "checking"; i++) {
     await wait(2000);
     status = await chatStatusAction(res.complaintId);
   }
-  // Never any counts; "other students" only while the issue is unresolved (decided on the server).
-  if (status?.state === "grouped") sys("Added to an issue other students reported");
-  if (status && status.state !== "checking") await bot(status.message);
-  for (const a of status?.answers ?? []) {
-    await bot(
-      <>
-        <span className="bubble-lab">Answered before</span>
-        <b className="block">{a.subject}</b>
-        {a.body}
-        <span className="hint2">Open the conversation to tell us whether this answered your question.</span>
-      </>,
-      700,
-    );
+  update({ typing: false });
+  const answers = status?.answers ?? [];
+  if (answers.length) {
+    // An earlier Union answer to the same question: reply with it directly, like a live agent.
+    for (const a of answers) await bot(a.body, 250);
+    const ids = answers.map((a) => a.messageId);
+    const verdict = await ask({ kind: "chips", options: ["Helpful", "Not helpful"], primaryFirst: true });
+    me(verdict);
+    if (verdict === "Helpful") {
+      await chatAnswerFeedbackAction(res.complaintId, ids, true);
+      await bot(THANKS);
+      return end();
+    }
+    await chatAnswerFeedbackAction(res.complaintId, ids, false);
+    await bot("Sorry about that. Tell me what you still need, and I'll pass it to the Student Union team.");
+    for (;;) {
+      const more = await ask({ kind: "text", min: 1, max: 2000 });
+      me(more);
+      update({ typing: true });
+      const sent = await chatFollowUpAction(res.complaintId, more);
+      update({ typing: false });
+      if (sent.ok) break;
+      await bot(sent.message ?? "That didn't send. Please try again.");
+      if (sent.message?.includes("wait") || sent.message?.includes("closed")) return end();
+    }
+    await bot(SUBMITTED);
+    return end();
   }
+  await bot(SUBMITTED, 200);
   const go = await ask({ kind: "chips", options: ["Open the conversation", "Go to my complaints & suggestions"], primaryFirst: true });
   finish(go.startsWith("Open") ? `/student/complaints/${res.complaintId}` : "/student/complaints");
 }
@@ -234,6 +260,15 @@ export function ChatIntake(props: {
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight });
   }, [msgs, typing, step]);
+
+  useEffect(() => {
+    // A new visit after a finished chat: start from a clean slate.
+    if (!ended) return;
+    ended = false;
+    running = false;
+    chat = INITIAL;
+    listeners.forEach((l) => l());
+  }, []);
 
   useEffect(() => {
     // Starts once per visit, even if React runs effects twice or the component remounts.
@@ -338,7 +373,9 @@ function Composer({ step, onAnswer }: { step: Step; onAnswer: (v: string) => voi
 
   const isText = step.kind === "text";
   const n = val.trim().length;
-  const canSend = isText ? n >= DESCRIPTION_MIN : !!status?.ok;
+  const minChars = step.kind === "text" ? (step.min ?? DESCRIPTION_MIN) : 0;
+  const maxChars = step.kind === "text" ? (step.max ?? DESCRIPTION_MAX) : 0;
+  const canSend = isText ? n >= minChars : !!status?.ok;
 
   // Debounced username check, run from the input handler (new: available? returning: exists?).
   function onUsername(v: string) {
@@ -385,7 +422,7 @@ function Composer({ step, onAnswer }: { step: Step; onAnswer: (v: string) => voi
             id="chat-input"
             autoFocus
             rows={1}
-            maxLength={DESCRIPTION_MAX}
+            maxLength={maxChars}
             value={val}
             onChange={(e) => setVal(e.target.value)}
             placeholder="Type it here…"
@@ -422,9 +459,9 @@ function Composer({ step, onAnswer }: { step: Step; onAnswer: (v: string) => voi
       </div>
       {isText && (
         <div className="mx-2 mt-1.5 flex justify-between text-xs text-[var(--muted)]">
-          <span>{n < DESCRIPTION_MIN ? `${DESCRIPTION_MIN - n} more characters needed` : "Looks good"}</span>
+          <span>{n < minChars ? `${minChars - n} more characters needed` : "Looks good"}</span>
           <span className="tabular-nums">
-            {val.length.toLocaleString()} / {DESCRIPTION_MAX.toLocaleString()}
+            {val.length.toLocaleString()} / {maxChars.toLocaleString()}
           </span>
         </div>
       )}

@@ -46,8 +46,8 @@ export const loginSchema = z.object({
 
 export const SUBJECT_MIN = 5;
 export const SUBJECT_MAX = 150;
-export const DESCRIPTION_MIN = 20;
-export const DESCRIPTION_MAX = 4000;
+import { DESCRIPTION_MAX, DESCRIPTION_MIN } from "./limits";
+export { DESCRIPTION_MAX, DESCRIPTION_MIN };
 
 /**
  * Students do not type a subject; a short title is derived from the description for

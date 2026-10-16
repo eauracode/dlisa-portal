@@ -8,20 +8,15 @@ const EVENT = "dli-theme-change";
 
 function currentTheme(): Theme {
   const set = document.documentElement.getAttribute("data-theme");
-  if (set === "light" || set === "dark") return set;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  // Light unless the student has chosen dark; the device setting is not followed.
+  return set === "dark" ? "dark" : "light";
 }
 
-// The theme lives on <html data-theme> (set before paint by ThemeScript) and the device
-// preference; both are external to React, so read them through useSyncExternalStore.
+// The theme lives on <html data-theme> (set before paint by ThemeScript), outside React, so it
+// is read through useSyncExternalStore.
 function subscribe(onChange: () => void) {
-  const mq = window.matchMedia("(prefers-color-scheme: dark)");
-  mq.addEventListener("change", onChange);
   window.addEventListener(EVENT, onChange);
-  return () => {
-    mq.removeEventListener("change", onChange);
-    window.removeEventListener(EVENT, onChange);
-  };
+  return () => window.removeEventListener(EVENT, onChange);
 }
 
 /**

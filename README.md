@@ -293,12 +293,20 @@ Before any external call, emails, phone numbers, long digit runs (such as matric
 
 ## Deployment
 
-1. **Database:** create a PostgreSQL database (for example a Supabase project). Set `DATABASE_URL` (direct or session-pooler connection) and `DATABASE_SSL=true`, then run `npm run db:migrate` from a trusted machine or CI. The migration creates the `portal_student` and `portal_public` roles and grants membership to the connecting role. On Supabase, the RLS-everywhere default keeps the tables closed to the Data API (`anon` and `authenticated` roles).
-2. **First administrator:** run `npm run admin:create -- --email chair@example.org --name "Union Chair" --role union_admin`. There are no default credentials, and the account must change its password at first login.
-3. **App:** deploy the Next.js app (Vercel, or `npm run build && npm start` behind HTTPS). Set `APP_SECRET`, `CRON_SECRET`, `TRUSTED_PROXY_COUNT` and the AI variables. Never commit `.env.local`.
-4. **Background work:** schedule `GET /api/jobs/process` with `Authorization: Bearer $CRON_SECRET` every 5–10 minutes (Vercel Cron sends this header automatically when `CRON_SECRET` is set), or run `npm run worker` as a long-lived process.
-5. **Branding:** edit `src/config/app.ts` (name, logo path) and the `--brand-*` colour tokens in `src/app/globals.css`.
+### Vercel + Neon (recommended)
 
+1. **Database:** in the Vercel project, Storage → Create Database → **Neon**, region **London** (`aws-eu-west-2`) to sit next to the app's `lhr1` region (set in `vercel.json`). Use the **pooled** connection string (host contains `-pooler`) as `DATABASE_URL`, and set `DATABASE_SSL=true`.
+2. **Schema:** from a trusted machine, run `npm run db:migrate` with `DATABASE_URL` pointing at Neon. The migrations create the `portal_student` and `portal_public` roles (row-level security) and grant them to the connecting role; Neon's owner role is allowed to do this.
+3. **First administrator:** `npm run admin:create -- --email chair@example.org --name "Union Chair" --role union_admin`. There are no default credentials; the account must change its password at first login.
+4. **Environment variables** (Vercel → Settings → Environment Variables): `DATABASE_URL`, `DATABASE_SSL=true`, `APP_SECRET` (32+ random characters), `CRON_SECRET` (16+), `AI_EMBEDDING_PROVIDER=transformers`, `AI_CLASSIFIER_PROVIDER=local`. Leave `MODEL_CACHE_DIR` and `TRUSTED_PROXY_COUNT` unset: on Vercel the model is cached in `/tmp/dli-models` (re-downloaded, ~23 MB, after a cold start) and Vercel's `X-Forwarded-For` holds only the visitor's address.
+5. **Function size:** the embedding runtime ships binaries for every platform (~290 MB). `next.config.ts` keeps only the Linux x64 binary in each function (~68 MB traced), well under Vercel's 250 MB limit.
+6. **Background work:** matching runs right after each submission (`after()`). `vercel.json` also schedules `GET /api/jobs/process` daily as a safety net (Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; the Hobby plan allows daily schedules only).
+
+### Any other host
+
+Run `npm run build && npm start` behind HTTPS with the same variables, set `TRUSTED_PROXY_COUNT` to the number of proxies in front of the app, and schedule `/api/jobs/process` every 5–10 minutes or run `npm run worker`. Never commit `.env.local`.
+
+**Branding:** names and logos are in `src/config/brand.ts`; colours are the tokens in `src/styles/theme-tokens.css`; site icons are `src/app/favicon.ico`, `icon.png` and `apple-icon.png`.
 ---
 
 ## Implementation status

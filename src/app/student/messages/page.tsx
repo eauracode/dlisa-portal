@@ -8,7 +8,7 @@ import { FlagBadge } from "@/components/status";
 import { BotAvatar } from "@/components/student/ChatBits";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Messages" };
+export const metadata: Metadata = { title: "Notifications" };
 
 const GENERAL_KIND: Record<string, { label: string; tone: BadgeTone }> = {
   direct: { label: "To you", tone: "violet" },
@@ -23,7 +23,7 @@ export default async function StudentMessagesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
         <p className="mt-1 text-[var(--muted)]">
           Your conversations with the Student Union. General notices are in <Link href="/memos">Memos</Link>.
         </p>

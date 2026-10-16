@@ -5,7 +5,7 @@ import { submitComplaintAction, type FormState } from "../../actions";
 import { Alert, Button, FieldError, Label, Select, Textarea } from "@/components/ui";
 import { UsernameField } from "@/components/username-field";
 import { DepartmentSelect } from "@/components/student/DepartmentSelect";
-import { DESCRIPTION_MAX, DESCRIPTION_MIN } from "@/lib/validation";
+import { DESCRIPTION_MAX, DESCRIPTION_MIN } from "@/lib/limits";
 
 interface Category {
   id: number;
