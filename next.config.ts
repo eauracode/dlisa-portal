@@ -29,8 +29,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["pg", "@huggingface/transformers", "onnxruntime-node"],
-  // The embedding runtime ships binaries for every platform (~290 MB). Hosted functions run on
-  // Linux x64, so the rest are left out to stay under Vercel's 250 MB function size limit.
+  // Function packaging on Vercel. The embedding runtime ships binaries for every platform
+  // (~290 MB); functions run on Linux x64, so the rest are always left out. The AI library and
+  // runtime are packaged only into /api/jobs/* (AI work is dispatched there; see
+  // src/lib/matching/dispatch.ts). Keeping ~68 MB off every other route lets Vercel bundle them
+  // together, which keeps the deployment within the Hobby plan's 12-function limit.
   outputFileTracingExcludes: {
     "/**": [
       "node_modules/onnxruntime-node/bin/napi-v*/darwin/**",
@@ -38,10 +41,28 @@ const nextConfig: NextConfig = {
       "node_modules/onnxruntime-node/bin/napi-v*/linux/arm64/**",
       "node_modules/onnxruntime-web/**",
     ],
+    ...Object.fromEntries(
+      ["/", "/_not-found", "/admin", "/admin/**", "/student", "/student/**", "/memos", "/privacy", "/issues", "/api/admin/**"].map((route) => [
+        route,
+        ["node_modules/@huggingface/transformers/**", "node_modules/onnxruntime-node/**", "node_modules/onnxruntime-common/**", "node_modules/sharp/**", "node_modules/@img/**"],
+      ]),
+    ),
   },
-  // The runtime's native binary is loaded dynamically, so tracing cannot find it on its own.
+  // The AI library and runtime are loaded dynamically (and are excluded from the shared trace
+  // above), so the job routes list them explicitly.
   outputFileTracingIncludes: {
-    "/**": ["node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**"],
+    "/api/jobs/**": [
+      "node_modules/@huggingface/**",
+      "node_modules/onnxruntime-common/**",
+      "node_modules/onnxruntime-node/package.json",
+      "node_modules/onnxruntime-node/dist/**",
+      "node_modules/onnxruntime-node/lib/**",
+      "node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**",
+      "node_modules/sharp/**",
+      "node_modules/@img/**",
+      "node_modules/detect-libc/**",
+      "node_modules/semver/**",
+    ],
   },
   turbopack: {
     rules: {

@@ -14,10 +14,9 @@ import * as issues from "@/lib/services/admin/issues";
 import { decideReview, reassignComplaint, retryMatching } from "@/lib/services/admin/complaints";
 import { createAdmin, saveCategory, updateAdmin } from "@/lib/services/admin/management";
 import { matchingSettingsSchema, prioritySettingsSchema, saveSetting } from "@/lib/services/settings";
-import { runMaintenance } from "@/lib/matching/maintenance";
-import { processMatchJob } from "@/lib/matching/jobs";
+import { aiRunsRemotely, dispatchAiTask, requestOrigin } from "@/lib/matching/dispatch";
 import { sendMessage, type MessageTarget } from "@/lib/services/messages";
-import { ensureAnswerEmbeddings, setMessageReusable } from "@/lib/services/instant-answers";
+import { setMessageReusable } from "@/lib/services/instant-answers";
 import { sendStaffReply } from "@/lib/services/conversations";
 import { archiveMemo, createMemo, editMemo, publishDraft, setMemoPinned } from "@/lib/services/memos";
 import { after } from "next/server";
@@ -205,7 +204,7 @@ export async function retryMatchingAction(fd: FormData) {
   await run(`/admin/complaints/${complaintId}`, "Automatic matching was retried", async (a) => {
     await retryMatching(a, complaintId);
     // If the provider is still unavailable the job stays queued for the worker.
-    await processMatchJob(complaintId);
+    await dispatchAiTask({ task: "match", complaintId });
   });
 }
 
@@ -225,7 +224,7 @@ export async function matchReviewAction(fd: FormData) {
 export async function runJobsAction() {
   await run("/admin/settings", "Matching queue processed", async (a) => {
     if (a.role !== "union_admin") throw new ForbiddenError();
-    await runMaintenance();
+    await dispatchAiTask({ task: "maintenance" });
   });
 }
 
@@ -306,7 +305,8 @@ export async function sendMessageAction(fd: FormData) {
     const reusable = fd.has("reuseShown") ? str(fd, "reusable") === "on" : undefined;
     await sendMessage(a, target, { subject: str(fd, "subject"), body: String(fd.get("body") ?? ""), reusable });
     // Prepare the answer for instant reuse now, rather than on the next student's submission.
-    after(() => ensureAnswerEmbeddings(pool()).catch((err) => console.error("Answer embedding failed", { error: (err as Error).name })));
+    const origin = aiRunsRemotely() ? await requestOrigin() : undefined;
+    after(() => dispatchAiTask({ task: "embed-answers" }, origin).catch((err) => console.error("Answer embedding failed", { error: (err as Error).name })));
   });
 }
 

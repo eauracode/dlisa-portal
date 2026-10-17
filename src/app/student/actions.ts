@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { processMatchJob } from "@/lib/matching/jobs";
+import { aiRunsRemotely, dispatchAiTask, requestOrigin } from "@/lib/matching/dispatch";
 import { revalidatePath } from "next/cache";
 import { pool } from "@/lib/db";
 import { findActiveStudent, isUsernameAvailable, registerStudent, setStudentDepartment, signInStudent } from "@/lib/auth/student-auth";
@@ -179,9 +179,10 @@ async function createComplaintFromForm(fd: FormData): Promise<CreateResult> {
     }
   }
   const complaintId = res.complaintId;
+  const origin = aiRunsRemotely() ? await requestOrigin() : undefined;
   after(async () => {
     try {
-      await processMatchJob(complaintId);
+      await dispatchAiTask({ task: "match", complaintId }, origin);
     } catch (err) {
       // The job stays queued; the worker / cron retries it.
       console.error("Background matching failed to start", { complaintId, error: (err as Error).name });
