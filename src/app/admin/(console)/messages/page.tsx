@@ -17,6 +17,8 @@ import { BotAvatar } from "@/components/student/ChatBits";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 import { ComposeMessageForm } from "./compose-form";
+import { listSavedResponses, type SavedResponse } from "@/lib/services/faqs";
+import { SaveAsFaq, SavedResponsePicker } from "@/components/admin/saved-responses";
 import { createMemoAction, memoAction, setMessageReuseAction, staffReplyAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Messages & memos" };
@@ -69,9 +71,11 @@ type Admin = Awaited<ReturnType<typeof requireAdmin>>;
 async function Conversations({ admin, selected }: { admin: Admin; selected: string | null }) {
   const list = await listConversations(pool(), admin);
   let thread: Awaited<ReturnType<typeof getStaffConversation>> | null = null;
+  let saved: SavedResponse[] = [];
   if (selected) {
     try {
       thread = await getStaffConversation(admin, selected);
+      saved = await listSavedResponses(pool(), selected);
     } catch (err) {
       if (!(err instanceof NotFoundError)) throw err;
     }
@@ -182,7 +186,11 @@ async function Conversations({ admin, selected }: { admin: Admin; selected: stri
               <label htmlFor="staff-reply" className="sr-only">
                 Reply to {thread.reporter}
               </label>
-              <Textarea id="staff-reply" name="body" required maxLength={2000} rows={3} placeholder={`Reply to ${thread.reporter}…`} />
+              <SavedResponsePicker textareaId="staff-reply" responses={saved} />
+              <Textarea id="staff-reply" name="body" required maxLength={2000} rows={4} placeholder={`Type a reply to ${thread.reporter}, or choose a saved response above…`} />
+              {can(admin.role, "faqs.manage") && (
+                <SaveAsFaq defaultQuestion={[...thread.messages].reverse().find((m) => m.sender_type === "student")?.body ?? thread.subject} />
+              )}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-muted">
                   Only this student sees this reply. <b>Send reply</b> moves it to In progress; <b>Reply &amp; resolve</b> marks it Resolved.

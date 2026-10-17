@@ -174,3 +174,40 @@ describe("confirming an instant answer", () => {
     expect((await complaintRow(id))!.status).not.toBe("resolved");
   });
 });
+
+describe("frequently asked questions", () => {
+  it("answer a student instantly, never expire, and stop when switched off", async () => {
+    const { createFaq, listFaqs, setFaqActive } = await import("@/lib/services/faqs");
+    const admin = await makeAdmin("case_officer");
+    const faqId = await createFaq(admin, { question: "#fees Why was I charged twice for school fees?", answer: "#fees Double charges are refunded by the bursary within 5 working days." });
+    // An FAQ written long ago is still offered.
+    await pool().query(`update student_messages set created_at = now() - interval '2 years' where id = $1`, [faqId]);
+
+    const s = await makeStudent();
+    const asked = await ask(s, "#fees The fees portal took my money two times.");
+    expect((await getInstantAnswers(s, asked)).map((a) => [a.message_id, a.audience])).toEqual([[faqId, "faq"]]);
+    expect((await listFaqs(pool(), admin))[0]).toMatchObject({ id: faqId, active: true, used: 1 });
+    // FAQs are a library, not a sent message.
+    expect((await listSentMessages(pool(), await makeAdmin("union_admin"))).some((m) => m.id === faqId)).toBe(false);
+
+    await setFaqActive(admin, faqId, false);
+    const later = await makeStudent();
+    expect(await getInstantAnswers(later, await ask(later, "#fees I was debited twice for fees."))).toEqual([]);
+  });
+
+  it("are offered to staff as saved responses, closest to the student's question first", async () => {
+    const { createFaq, listSavedResponses } = await import("@/lib/services/faqs");
+    const admin = await makeAdmin("union_admin");
+    await createFaq(admin, { question: "#lms How do I reset my LMS password?", answer: "#lms Use 'Forgot password' on the LMS login page." });
+    const fees = await createFaq(admin, { question: "#fees When is the school fees deadline?", answer: "#fees Fees close on 30 November." });
+    // Embed the library (normally done right after saving).
+    const { ensureAnswerEmbeddings } = await import("@/lib/services/instant-answers");
+    await ensureAnswerEmbeddings(pool());
+    const student = await makeStudent();
+    const c = await ask(student, "#fees Is there an extension to the fees deadline for final-year students?");
+    const saved = await listSavedResponses(pool(), c);
+    expect(saved[0]).toMatchObject({ id: fees, kind: "faq" });
+    expect(saved[0].match).toBeGreaterThan(0.9);
+    expect(saved).toHaveLength(2);
+  });
+});

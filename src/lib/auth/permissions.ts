@@ -41,6 +41,8 @@ export const PERMISSIONS = {
   // Memos: Case Officers can draft; only Association Admins publish, pin, edit published memos or archive.
   "memos.draft": ["union_admin", "case_officer"],
   "memos.publish": ["union_admin"],
+  // Frequently asked questions (saved answers students get instantly).
+  "faqs.manage": ["union_admin", "case_officer"],
   "jobs.run": ["union_admin"],
 } as const satisfies Record<string, readonly AdminRole[]>;
 

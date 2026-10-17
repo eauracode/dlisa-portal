@@ -155,7 +155,7 @@ async function getMessageSummary(db: Db, admin: AdminContext, complaintWhere: st
   const out = await one<{ staff_replies: number; messages_sent: number }>(
     db,
     `select (select count(*)::int from complaint_messages where sender_type = 'staff'${and}) as staff_replies,
-            (select count(*)::int from student_messages where memo_status <> 'draft'${and}) as messages_sent`,
+            (select count(*)::int from student_messages where memo_status <> 'draft' and audience <> 'faq'${and}) as messages_sent`,
     rp,
   );
   return { ...summary!, ...out! };

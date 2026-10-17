@@ -8,6 +8,8 @@ import { can } from "@/lib/auth/permissions";
 import { getComplaintForAdmin } from "@/lib/services/admin/complaints";
 import { issueOptionsForSelect } from "@/lib/services/admin/issues";
 import { listInstantAnswersForComplaint } from "@/lib/services/instant-answers";
+import { listSavedResponses } from "@/lib/services/faqs";
+import { SaveAsFaq, SavedResponsePicker } from "@/components/admin/saved-responses";
 import { NotFoundError } from "@/lib/services/admin/context";
 import { formatDateTime, ISSUE_STATUS_LABELS } from "@/lib/format";
 import { uuidSchema } from "@/lib/validation";
@@ -33,7 +35,7 @@ export default async function AdminComplaintPage({ params, searchParams }: { par
   const { complaint: c } = d;
   const canRegroup = can(admin.role, "complaints.reassign");
   const options = canRegroup ? await issueOptionsForSelect(pool(), admin, c.consolidated_issue_id ?? undefined) : [];
-  const answers = await listInstantAnswersForComplaint(pool(), c.id);
+  const [answers, saved] = await Promise.all([listInstantAnswersForComplaint(pool(), c.id), listSavedResponses(pool(), c.id)]);
 
   return (
     <>
@@ -202,7 +204,9 @@ export default async function AdminComplaintPage({ params, searchParams }: { par
                   <input type="hidden" name="complaintId" value={c.id} />
                   <input type="hidden" name="back" value={`/admin/complaints/${c.id}`} />
                   <Input name="subject" required minLength={3} maxLength={150} placeholder="Subject" aria-label="Subject" />
-                  <Textarea name="body" required minLength={5} maxLength={4000} rows={4} placeholder="Private message to the student who wrote this" aria-label="Message" />
+                  <SavedResponsePicker textareaId="reporter-message" responses={saved} />
+                  <Textarea id="reporter-message" name="body" required minLength={5} maxLength={4000} rows={4} placeholder="Type a private message, or choose a saved response above" aria-label="Message" />
+                  {can(admin.role, "faqs.manage") && <SaveAsFaq defaultQuestion={c.subject} />}
                   <ReuseCheckbox defaultChecked={false} personal />
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" name="intent" value="send" variant="secondary">

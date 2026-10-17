@@ -16,6 +16,7 @@ const WORK: Array<{ href: string; label: string; permission?: Permission }> = [
   { href: "/admin/complaints", label: "Submissions" },
   { href: "/admin/match-review", label: "Match review", permission: "matches.review" },
   { href: "/admin/messages", label: "Messages & memos", permission: "messages.view" },
+  { href: "/admin/faqs", label: "FAQs", permission: "faqs.manage" },
   { href: "/admin/reports", label: "Reports", permission: "reports.view" },
 ];
 

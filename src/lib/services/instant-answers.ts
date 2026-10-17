@@ -8,8 +8,8 @@ import { resolveComplaint } from "./progress";
 import { ActionError, NotFoundError, type AdminContext } from "./admin/context";
 
 /**
- * Instant answers. Every reusable staff message (memo, reply to a grouped issue, or a direct
- * reply staff marked as reusable) is part of an answer library. When a new submission asks
+ * Instant answers. Every reusable staff message (FAQ, memo, reply to a grouped issue, or a
+ * direct reply staff marked as reusable) is part of an answer library. When a new submission asks
  * the same thing, the earlier answer is delivered to the student's Messages inbox and shown
  * on their receipt straight away; the submission still goes to staff as normal.
  */
@@ -34,8 +34,8 @@ export interface InstantAnswerMatch {
   similarity: number;
 }
 
-// Drafts and archived memos are never offered.
-const windowSql = `m.memo_status = 'published' and m.created_at > now() - make_interval(days => case when m.audience = 'broadcast' then $2::int else $3::int end)`;
+// Drafts, archived memos and switched-off FAQs are never offered. FAQs do not expire.
+const windowSql = `m.memo_status = 'published' and (m.audience = 'faq' or m.created_at > now() - make_interval(days => case when m.audience = 'broadcast' then $2::int else $3::int end))`;
 
 /** Embeds library entries that have no vector for the current model yet. */
 export async function ensureAnswerEmbeddings(db: Db, limit = INSTANT_ANSWER_CONFIG.embedBatch): Promise<number> {

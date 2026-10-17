@@ -202,7 +202,7 @@ export async function listSentMessages(db: Db, admin: AdminContext, limit = 100)
        join admin_users a on a.id = m.author_admin_id
        left join consolidated_issues i on i.id = m.target_issue_id
        left join students s on s.id = m.target_student_id
-      ${own ? "where m.author_admin_id = $2" : ""}
+      where m.audience <> 'faq' ${own ? "and m.author_admin_id = $2" : ""}
       order by m.created_at desc limit $1`,
     own ? [limit, admin.id] : [limit],
   );

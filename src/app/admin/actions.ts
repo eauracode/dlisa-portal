@@ -18,6 +18,7 @@ import { aiRunsRemotely, dispatchAiTask, requestOrigin } from "@/lib/matching/di
 import { sendMessage, type MessageTarget } from "@/lib/services/messages";
 import { setMessageReusable } from "@/lib/services/instant-answers";
 import { sendStaffReply } from "@/lib/services/conversations";
+import { createFaq, editFaq, setFaqActive } from "@/lib/services/faqs";
 import { archiveMemo, createMemo, editMemo, publishDraft, setMemoPinned } from "@/lib/services/memos";
 import { after } from "next/server";
 
@@ -304,10 +305,10 @@ export async function sendMessageAction(fd: FormData) {
               : { type };
     // Forms that show the reuse checkbox send reuseShown; others keep the audience default.
     const reusable = fd.has("reuseShown") ? str(fd, "reusable") === "on" : undefined;
+    checkFaqQuestion(fd);
     await sendMessage(a, target, { subject: str(fd, "subject"), body: String(fd.get("body") ?? ""), reusable, resolve });
-    // Prepare the answer for instant reuse now, rather than on the next student's submission.
-    const origin = aiRunsRemotely() ? await requestOrigin() : undefined;
-    after(() => dispatchAiTask({ task: "embed-answers" }, origin).catch((err) => console.error("Answer embedding failed", { error: (err as Error).name })));
+    await saveReplyAsFaq(a, fd);
+    await prepareAnswers();
   });
 }
 
@@ -326,7 +327,46 @@ export async function staffReplyAction(fd: FormData) {
   const complaintId = uuidSchema.parse(str(fd, "complaintId"));
   const resolve = str(fd, "intent") === "resolve";
   const back = adminBack(fd, `/admin/messages?tab=conversations&c=${complaintId}`);
-  await run(back, resolve ? "Reply sent and marked resolved" : "Reply sent", (a) => sendStaffReply(a, complaintId, String(fd.get("body") ?? ""), { resolve }));
+  const faq = str(fd, "saveFaq") === "on";
+  await run(back, `${resolve ? "Reply sent and marked resolved" : "Reply sent"}${faq ? ", and saved as an FAQ" : ""}`, async (a) => {
+    checkFaqQuestion(fd);
+    await sendStaffReply(a, complaintId, String(fd.get("body") ?? ""), { resolve });
+    if (await saveReplyAsFaq(a, fd)) await prepareAnswers();
+  });
+}
+
+/** Checked before sending, so a bad FAQ question never leaves a reply half-done. */
+function checkFaqQuestion(fd: FormData) {
+  const q = str(fd, "faqQuestion").trim();
+  if (str(fd, "saveFaq") === "on" && (q.length < 5 || q.length > 150)) throw new ActionError("The FAQ question must be 5–150 characters.");
+}
+
+/** "Save as FAQ" on a reply form: the reply becomes a frequently asked question. */
+async function saveReplyAsFaq(a: AdminContext, fd: FormData): Promise<boolean> {
+  if (str(fd, "saveFaq") !== "on") return false;
+  await createFaq(a, { question: str(fd, "faqQuestion"), answer: String(fd.get("body") ?? "") });
+  return true;
+}
+
+/** Prepare new answers for instant reuse now, rather than on the next student's submission. */
+async function prepareAnswers() {
+  const origin = aiRunsRemotely() ? await requestOrigin() : undefined;
+  after(() => dispatchAiTask({ task: "embed-answers" }, origin).catch((err) => console.error("Answer embedding failed", { error: (err as Error).name })));
+}
+
+export async function faqAction(fd: FormData) {
+  const op = z.enum(["create", "edit", "on", "off"]).parse(str(fd, "op"));
+  const ok = { create: "FAQ added. Students who ask this will get the answer instantly", edit: "FAQ updated", on: "FAQ switched on", off: "FAQ switched off" }[op];
+  await run("/admin/faqs", ok, async (a) => {
+    const input = { question: str(fd, "question"), answer: String(fd.get("answer") ?? "") };
+    if (op === "create") await createFaq(a, input);
+    else {
+      const id = uuidSchema.parse(str(fd, "faqId"));
+      if (op === "edit") await editFaq(a, id, input);
+      else await setFaqActive(a, id, op === "on");
+    }
+    if (op !== "off") await prepareAnswers();
+  });
 }
 
 export async function createMemoAction(fd: FormData) {
