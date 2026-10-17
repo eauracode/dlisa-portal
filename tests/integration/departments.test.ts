@@ -94,9 +94,10 @@ describe("department privacy on staff screens", () => {
     for (let i = 0; i < 3; i++) await report(await student("FIN"));
     await report(await student("ACC"));
 
-    // 4 Finance students: withheld everywhere, and the filter does not match.
+    // 4 Finance students: Association staff see each reporter's department, but the summary
+    // counts and the filter still wait for 5.
     let detail = await getIssueDetail(pool(), admin, issueId);
-    expect(detail.complaints.every((c) => c.department === null)).toBe(true);
+    expect(detail.complaints.filter((c) => c.department === "Finance")).toHaveLength(4);
     expect(detail.byDepartment).toEqual({ shown: [], withheld: 5, withheldGroups: 2 });
     expect(await listIssues(pool(), admin, { department: "FIN" })).toHaveLength(0);
     expect(await listComplaints(pool(), admin, { department: "FIN" })).toHaveLength(0);
@@ -106,7 +107,7 @@ describe("department privacy on staff screens", () => {
     detail = await getIssueDetail(pool(), admin, issueId);
     expect(detail.byDepartment).toEqual({ shown: [{ name: "Finance", students: 5 }], withheld: 1, withheldGroups: 1 });
     expect(detail.complaints.filter((c) => c.department === "Finance")).toHaveLength(5);
-    expect(detail.complaints.filter((c) => c.department === null)).toHaveLength(1); // the lone Accounting student
+    expect(detail.complaints.every((c) => c.department !== null)).toBe(true); // including the lone Accounting student
     expect((await listIssues(pool(), admin, { department: "FIN" })).map((i) => i.id)).toEqual([issueId]);
     expect(await listComplaints(pool(), admin, { department: "FIN" })).toHaveLength(5);
     expect(await listComplaints(pool(), admin, { department: "ACC" })).toHaveLength(0);
@@ -126,8 +127,12 @@ describe("department privacy on staff screens", () => {
       await pool().query(`update complaints set consolidated_issue_id = $2 where id = $1`, [c, issueId]);
     }
     const detail = await getIssueDetail(pool(), admin, issueId);
-    expect(detail.complaints.every((c) => c.department === null)).toBe(true);
+    expect(detail.complaints.every((c) => c.department === "Finance")).toBe(true); // Association staff see reporters' departments
     expect(detail.byDepartment.shown).toEqual([]);
+    // School-management oversight officers never see departments or usernames on sensitive issues.
+    await pool().query(`update consolidated_issues set escalated = true, escalation_status = 'pending' where id = $1`, [issueId]);
+    const oversight = await getIssueDetail(pool(), await makeAdmin("oversight_officer"), issueId);
+    expect(oversight.complaints.every((c) => c.department === null && /^Reporter [0-9A-F]{6}$/.test(c.reporter))).toBe(true);
     expect(await listIssues(pool(), admin, { department: "FIN" })).toHaveLength(0);
   });
 });

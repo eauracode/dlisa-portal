@@ -43,12 +43,12 @@ describe("decideMatch", () => {
   });
 
   it("sends an uncertain match to review", () => {
-    const d = decideMatch(subject(), [candidate("a", 0.75)], cfg);
+    const d = decideMatch(subject(), [candidate("a", 0.45)], cfg);
     expect(d.kind).toBe("review");
   });
 
   it("creates a new issue for a low-confidence match", () => {
-    const d = decideMatch(subject(), [candidate("a", 0.4)], cfg);
+    const d = decideMatch(subject(), [candidate("a", 0.3)], cfg);
     expect(d).toMatchObject({ kind: "new", bestConfidence: expect.any(Number) });
   });
 
@@ -97,8 +97,8 @@ describe("decideMatch", () => {
 
   it("respects configurable thresholds", () => {
     const strict = { ...cfg, autoThreshold: 0.99, reviewThreshold: 0.95 };
-    // 0.8 similarity + 0.07 structural evidence = 0.87: review by default, new under strict settings.
-    expect(decideMatch(subject(), [candidate("a", 0.8)], cfg).kind).toBe("review");
-    expect(decideMatch(subject(), [candidate("a", 0.8)], strict).kind).toBe("new");
+    // 0.45 similarity + 0.07 structural evidence = 0.52: review by default, new under strict settings.
+    expect(decideMatch(subject(), [candidate("a", 0.45)], cfg).kind).toBe("review");
+    expect(decideMatch(subject(), [candidate("a", 0.45)], strict).kind).toBe("new");
   });
 });

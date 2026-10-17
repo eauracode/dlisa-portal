@@ -6,7 +6,8 @@ import { addComplaintEvent, createIssueFromComplaint, linkComplaintToIssue } fro
 import { applyIssueStatus } from "./issues";
 import { issueDepartmentCounts, issueDepartmentFilterSql, reporterDepartment } from "./departments";
 import { departmentForStaff } from "../../privacy";
-import { ActionError, loadIssueForAdmin, NotFoundError, reporterLabel, type AdminContext } from "./context";
+import { ActionError, loadIssueForAdmin, NotFoundError, reporterNamer, seesStudentIdentity, type AdminContext } from "./context";
+import { departmentName } from "../../departments";
 
 export interface ComplaintFilters {
   q?: string;
@@ -72,10 +73,12 @@ export async function listComplaints(db: Db, admin: AdminContext, f: ComplaintFi
       order by c.created_at desc limit 300`,
     params,
   );
+  const name = await reporterNamer(db, admin, result.map((r) => r.student_id));
+  const sees = seesStudentIdentity(admin);
   return result.map(({ student_id, department_code, dept_reporters, issue_sensitive, ...r }) => ({
     ...r,
-    reporter: reporterLabel(student_id),
-    department: departmentForStaff({ departmentCode: department_code, sameDepartmentReportersOnIssue: dept_reporters, issueIsSensitive: !!issue_sensitive }),
+    reporter: name(student_id),
+    department: sees ? departmentName(department_code) : departmentForStaff({ departmentCode: department_code, sameDepartmentReportersOnIssue: dept_reporters, issueIsSensitive: !!issue_sensitive }),
   }));
 }
 
@@ -134,8 +137,9 @@ export async function getComplaintForAdmin(db: Db, admin: AdminContext, complain
   const issueSensitive = c.consolidated_issue_id
     ? ((await one<{ sensitive: boolean }>(db, `select sensitive from consolidated_issues where id = $1`, [c.consolidated_issue_id]))?.sensitive ?? true)
     : true;
-  const department = reporterDepartment(department_code, deptCounts, issueSensitive);
-  return { complaint: { ...complaint, reporter: reporterLabel(student_id), department }, analysis, links, reviews, events, job, issue };
+  const department = reporterDepartment(department_code, deptCounts, issueSensitive, seesStudentIdentity(admin));
+  const name = await reporterNamer(db, admin, [student_id]);
+  return { complaint: { ...complaint, reporter: name(student_id), department }, analysis, links, reviews, events, job, issue };
 }
 
 /** Manually (re)group a complaint: into an existing issue, or into a new issue. */
@@ -209,10 +213,12 @@ export async function listPendingReviews(db: Db, admin: AdminContext) {
   );
   // The reporter's department is shown only when the proposed issue already has 5+ students
   // from that department and is not sensitive (same rule as everywhere else).
+  const name = await reporterNamer(db, admin, list.map((r) => r.student_id));
+  const sees = seesStudentIdentity(admin);
   return list.map(({ reporter_department, dept_reporters, student_id, ...r }) => ({
     ...r,
-    reporter: reporterLabel(student_id),
-    department: departmentForStaff({ departmentCode: reporter_department, sameDepartmentReportersOnIssue: dept_reporters, issueIsSensitive: r.issue_sensitive }),
+    reporter: name(student_id),
+    department: sees ? departmentName(reporter_department) : departmentForStaff({ departmentCode: reporter_department, sameDepartmentReportersOnIssue: dept_reporters, issueIsSensitive: r.issue_sensitive }),
   }));
 }
 

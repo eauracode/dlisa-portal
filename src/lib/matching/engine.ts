@@ -20,8 +20,10 @@ export interface MatchingConfig {
 }
 
 export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
-  autoThreshold: 0.9,
-  reviewThreshold: 0.7,
+  // Submissions 60% or more similar to an existing issue join it automatically (and receive its
+  // replies straight away); 45–60% goes to an administrator to confirm.
+  autoThreshold: 0.6,
+  reviewThreshold: 0.45,
   ambiguityMargin: 0.03,
   resolvedLookbackDays: 120,
 };

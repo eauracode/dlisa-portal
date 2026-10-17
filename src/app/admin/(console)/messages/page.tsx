@@ -184,8 +184,19 @@ async function Conversations({ admin, selected }: { admin: Admin; selected: stri
               </label>
               <Textarea id="staff-reply" name="body" required maxLength={2000} rows={3} placeholder={`Reply to ${thread.reporter}…`} />
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted">Only this student sees this reply, in their complaint&apos;s chat. To tell everyone on the issue, publish an update instead.</p>
-                <Button>Send reply</Button>
+                <p className="text-xs text-muted">
+                  Only this student sees this reply. <b>Send reply</b> moves it to In progress; <b>Reply &amp; resolve</b> marks it Resolved.
+                </p>
+                <div className="flex gap-2">
+                  <Button name="intent" value="reply" variant="secondary">
+                    Send reply
+                  </Button>
+                  {thread.status !== "resolved" && (
+                    <Button name="intent" value="resolve">
+                      Reply &amp; resolve
+                    </Button>
+                  )}
+                </div>
               </div>
             </form>
           )}

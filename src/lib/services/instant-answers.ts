@@ -4,8 +4,7 @@ import { getAIProviders, withTimeout } from "../ai";
 import { extractCourseCodes } from "../ai/extract";
 import { embeddingText } from "../ai/prompt";
 import { calibrateSimilarity, cosineSimilarity } from "../matching/engine";
-import { addComplaintEvent, addIssueEvent, recalculatePriority } from "./consolidation";
-import { getPriorityConfig } from "./settings";
+import { resolveComplaint } from "./progress";
 import { ActionError, NotFoundError, type AdminContext } from "./admin/context";
 
 /**
@@ -111,24 +110,21 @@ export async function recordInstantAnswers(tx: Db, complaintId: string, answers:
 }
 
 /**
- * A submission that joins a grouped issue also receives the replies already sent to it.
- *
- * When it arrives through a merge, it receives every reply sent to everyone on the issue
- * (the reuse setting and the 3-reply limit apply only to ordinary grouping, where the match
- * is automatic). Replies the student already received are never sent again.
+ * A submission that joins a grouped issue (automatically, after review, or through a merge)
+ * instantly receives every reply already sent to everyone on that issue. Replies the student
+ * already received are never sent again. Personal replies are not issue messages, so they are
+ * never shared this way.
  */
-export async function deliverIssueAnswers(tx: Db, complaintId: string, issueId: string, opts: { merge?: boolean } = {}) {
+export async function deliverIssueAnswers(tx: Db, complaintId: string, issueId: string) {
   const earlier = await rows<{ id: string }>(
     tx,
     `select m.id from student_messages m
       where m.audience = 'issue'
-        and ($2 or m.reusable)
         and m.target_issue_id in (select id from consolidated_issues where id = $1 or merged_into_id = $1)
         and not exists (select 1 from student_message_recipients r join complaints c on c.student_id = r.student_id
-                         where r.message_id = m.id and c.id = $3)
-      order by m.created_at desc
-      limit case when $2 then null else 3 end`,
-    [issueId, !!opts.merge, complaintId],
+                         where r.message_id = m.id and c.id = $2)
+      order by m.created_at desc`,
+    [issueId, complaintId],
   );
   await recordInstantAnswers(tx, complaintId, earlier.map((m) => ({ messageId: m.id, similarity: 1 })), "same_issue");
 }
@@ -179,43 +175,13 @@ export async function confirmAnswerResolved(studentId: string, complaintId: stri
   // Row-level security: fails for anyone but the submission's owner.
   if (!(await recordAnswerFeedback(studentId, complaintId, messageId, true))) return false;
   await withTransaction(async (tx) => {
-    const c = await one<{ status: string; consolidated_issue_id: string | null }>(
-      tx,
-      `select status, consolidated_issue_id from complaints where id = $1 and student_id = $2 for update`,
-      [complaintId, studentId],
-    );
-    if (!c || ["resolved", "closed", "review_requested"].includes(c.status)) return;
-    await tx.query(`update complaints set status = 'resolved', resolved_by_student_at = now(), updated_at = now() where id = $1`, [complaintId]);
-    await addComplaintEvent(tx, {
-      complaintId,
-      actorType: "student",
-      actorId: studentId,
-      eventType: "status_changed",
-      previousValue: c.status,
-      newValue: "resolved",
-      message: "You confirmed the Students' Association's answer resolved your question.",
+    const owned = await one<{ id: string }>(tx, `select id from complaints where id = $1 and student_id = $2`, [complaintId, studentId]);
+    if (!owned) return;
+    await resolveComplaint(tx, { type: "student", id: studentId }, complaintId, "You confirmed the Students' Association's answer resolved your question.", {
+      byStudent: true,
+      issueNote: ANSWER_CONFIRMED_NOTE,
     });
     await audit(tx, { actorType: "student", actorId: studentId, action: "complaint.answer_confirmed", entityType: "complaint", entityId: complaintId, metadata: { messageId } });
-
-    if (!c.consolidated_issue_id) return;
-    const issueId = c.consolidated_issue_id;
-    await addIssueEvent(tx, { issueId, actorType: "student", actorId: studentId, eventType: "answer_confirmed", newValue: complaintId });
-    const issue = await one<{ status: string; open_reports: number }>(
-      tx,
-      `select i.status, (select count(*)::int from complaints c where c.consolidated_issue_id = i.id and c.status not in ('resolved', 'closed')) as open_reports
-         from consolidated_issues i where i.id = $1 for update`,
-      [issueId],
-    );
-    if (!issue || issue.open_reports > 0 || ["resolved", "closed", "merged"].includes(issue.status)) {
-      await tx.query(`update consolidated_issues set last_activity_at = now() where id = $1`, [issueId]);
-      return;
-    }
-    await tx.query(
-      `update consolidated_issues set status = 'resolved', resolved_at = now(), resolution_note = $2, last_activity_at = now(), updated_at = now() where id = $1`,
-      [issueId, ANSWER_CONFIRMED_NOTE],
-    );
-    await addIssueEvent(tx, { issueId, actorType: "system", eventType: "status_changed", previousValue: issue.status, newValue: "resolved", reason: ANSWER_CONFIRMED_NOTE });
-    await recalculatePriority(tx, issueId, await getPriorityConfig(tx));
   });
   return true;
 }

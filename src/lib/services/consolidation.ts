@@ -204,7 +204,7 @@ export async function linkComplaintToIssue(
     await refreshIssueAggregates(tx, previousIssueId, config);
   }
   // Replies already sent to this issue's reporters reach the newcomer straight away.
-  await deliverIssueAnswers(tx, input.complaintId, input.issueId, { merge: input.method === "merge" });
+  await deliverIssueAnswers(tx, input.complaintId, input.issueId);
 }
 
 const SEVERITY_ORDER: Severity[] = ["routine", "moderate", "serious", "urgent"];

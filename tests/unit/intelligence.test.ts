@@ -123,7 +123,7 @@ describe("matching decision engine v2", () => {
     expect(applyVerification(auto, { verdict: "different", reason: "x" }, false).kind).toBe("review");
     expect(applyVerification(auto, { verdict: "uncertain", reason: "x" }, true).kind).toBe("review");
     expect(applyVerification(auto, { verdict: "uncertain", reason: "x" }, false).kind).toBe("auto");
-    const review = decideMatch(subject(), [cand("a", 0.6)], cfg); // 0.6 + 0.18 structural = review band
+    const review = decideMatch(subject(), [cand("a", 0.35)], cfg); // 0.35 + 0.18 structural = review band
     expect(review.kind).toBe("review");
     expect(applyVerification(review, { verdict: "same", reason: "x" }, true).kind).toBe("review");
   });

@@ -204,8 +204,17 @@ export default async function AdminComplaintPage({ params, searchParams }: { par
                   <Input name="subject" required minLength={3} maxLength={150} placeholder="Subject" aria-label="Subject" />
                   <Textarea name="body" required minLength={5} maxLength={4000} rows={4} placeholder="Private message to the student who wrote this" aria-label="Message" />
                   <ReuseCheckbox defaultChecked={false} personal />
-                  <Button size="sm">Send privately</Button>
-                  <p className="text-xs text-muted">Delivered to {c.reporter}&apos;s Messages inbox. Their username is not shown to you.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" name="intent" value="send" variant="secondary">
+                      Send privately
+                    </Button>
+                    {!["resolved", "closed"].includes(c.status) && (
+                      <Button size="sm" name="intent" value="resolve">
+                        Send &amp; resolve
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">Delivered to {c.reporter}&apos;s Messages inbox. Sending moves this to In progress; &ldquo;Send &amp; resolve&rdquo; marks it Resolved.</p>
                 </form>
               </CardContent>
             </Card>

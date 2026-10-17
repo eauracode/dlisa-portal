@@ -104,7 +104,17 @@ export default async function AdminIssuePage({ params, searchParams }: { params:
             <Input name="subject" required minLength={3} maxLength={150} placeholder="Subject" aria-label="Subject" />
             <Textarea name="body" className="min-h-24" required minLength={5} maxLength={4000} placeholder="Message" aria-label="Message" />
             <ReuseCheckbox defaultChecked />
-            <Button>Send message</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button name="intent" value="send" variant={can(role, "issues.update_status") && !["resolved", "closed"].includes(issue.status) ? "secondary" : "primary"}>
+                Send message
+              </Button>
+              {can(role, "issues.update_status") && !["resolved", "closed"].includes(issue.status) && (
+                <Button name="intent" value="resolve">
+                  Send &amp; mark issue resolved
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted">Sending moves the issue to In progress. &ldquo;Send &amp; mark issue resolved&rdquo; resolves it for every reporter.</p>
           </form>
         </Act>
       )}

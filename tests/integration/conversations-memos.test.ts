@@ -74,9 +74,8 @@ describe("the student conversation", () => {
     expect(await countUnreadForStaff(pool(), admin)).toBe(1);
 
     const convo = await getStaffConversation(admin, id);
-    expect(convo.reporter).toMatch(/^Reporter [0-9A-F]{6}$/);
     const username = (await one<{ username: string }>(pool(), `select username from students where id = $1`, [owner]))!.username;
-    expect(JSON.stringify(convo)).not.toContain(username); // staff see a reporter code, never the username
+    expect(convo.reporter).toBe(`@${username}`); // Association staff see the username
     expect(await countUnreadForStaff(pool(), admin)).toBe(0);
 
     await sendStaffReply(admin, id, "Yes, the ICT unit is on it.");
@@ -244,5 +243,67 @@ describe("merging issues and not-helpful answers", () => {
     await sendStaffReply(admin, id, "Sorry about that. We have reset your LMS access; please try again.");
     expect((await listConversations(pool(), admin)).find((c) => c.complaint_id === id)!.needs_personal_reply).toBe(false);
     expect(await countUnreadForStaff(pool(), admin)).toBe(0);
+  });
+});
+
+describe("how a submission's status moves", () => {
+  it("goes Received → In progress on a staff reply, and Resolved on Reply & resolve; the issue follows once all are resolved", async () => {
+    const admin = await makeAdmin("union_admin");
+    const [a, b] = [await makeStudent(), await makeStudent()];
+    const first = await report(a);
+    const second = await report(b); // grouped onto the same issue
+    const issueId = (await complaintRow(first))!.consolidated_issue_id!;
+    expect((await complaintRow(second))!.consolidated_issue_id).toBe(issueId);
+    expect((await complaintRow(first))!.status).toBe("received");
+
+    await sendStaffReply(admin, first, "We are looking into the LMS problem now.");
+    expect((await complaintRow(first))!.status).toBe("in_progress");
+    expect((await one<{ status: string }>(pool(), `select status from consolidated_issues where id = $1`, [issueId]))!.status).toBe("in_progress");
+
+    await sendStaffReply(admin, first, "Fixed: please log in again.", { resolve: true });
+    expect((await complaintRow(first))!.status).toBe("resolved");
+    // Student B is still waiting, so the issue stays open.
+    expect((await one<{ status: string }>(pool(), `select status from consolidated_issues where id = $1`, [issueId]))!.status).toBe("in_progress");
+
+    await sendStaffReply(admin, second, "Fixed for you too.", { resolve: true });
+    expect((await complaintRow(second))!.status).toBe("resolved");
+    expect((await complaintRow(first))!.status).toBe("resolved");
+    expect((await one<{ status: string }>(pool(), `select status from consolidated_issues where id = $1`, [issueId]))!.status).toBe("resolved");
+  });
+
+  it("moves the whole issue with a message to all reporters, or resolves it with Send & resolve", async () => {
+    const admin = await makeAdmin("union_admin");
+    const ids = [await report(await makeStudent()), await report(await makeStudent())];
+    const issueId = (await complaintRow(ids[0]))!.consolidated_issue_id!;
+    await sendMessage(admin, { type: "issue", issueId }, { subject: "LMS outage", body: "ICT is restoring the LMS today." });
+    for (const id of ids) expect((await complaintRow(id))!.status).toBe("in_progress");
+    await sendMessage(admin, { type: "issue", issueId }, { subject: "LMS restored", body: "The LMS is working again.", resolve: true });
+    for (const id of ids) expect((await complaintRow(id))!.status).toBe("resolved");
+  });
+
+  it("gives a newly grouped student every reply already sent to the issue, instantly", async () => {
+    const admin = await makeAdmin("union_admin");
+    const first = await report(await makeStudent());
+    const issueId = (await complaintRow(first))!.consolidated_issue_id!;
+    for (let i = 1; i <= 4; i++) await sendMessage(admin, { type: "issue", issueId }, { subject: `Update ${i}`, body: `Progress note number ${i}.`, reusable: i !== 2 });
+    const late = await makeStudent();
+    const id = await report(late);
+    expect((await complaintRow(id))!.consolidated_issue_id).toBe(issueId);
+    expect(await getInstantAnswers(late, id)).toHaveLength(4);
+  });
+
+  it("summarises messages on the Overview and lists who is waiting", async () => {
+    const { getOverview } = await import("@/lib/services/admin/overview");
+    const admin = await makeAdmin("union_admin");
+    const s = await makeStudent();
+    const waiting = await report(s, "#fees My fees receipt is missing.");
+    let o = await getOverview(pool(), admin, {});
+    expect(o.messages).toMatchObject({ submissions: 1, needs_reply: 1, not_answered: 1 });
+    const username = (await one<{ username: string }>(pool(), `select username from students where id = $1`, [s]))!.username;
+    expect(o.attention[0]).toMatchObject({ complaint_id: waiting, reporter: `@${username}`, reason: "not_answered" });
+    await sendStaffReply(admin, waiting, "The bursary has re-issued it.", { resolve: true });
+    o = await getOverview(pool(), admin, {});
+    expect(o.messages).toMatchObject({ needs_reply: 0, resolved: 1, staff_replies: 1 });
+    expect(o.attention).toHaveLength(0);
   });
 });

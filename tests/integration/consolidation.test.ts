@@ -16,7 +16,7 @@ beforeEach(async () => {
   embedder = useFakeAI({
     lms: basis(0),
     lmsdup: basis(0),
-    lmsmaybe: vectorWithSimilarity(0.74, 1),
+    lmsmaybe: vectorWithSimilarity(0.36, 1),
     unrelated: basis(5),
   });
   examCat = await categoryId("materials");
@@ -78,8 +78,8 @@ describe("complaint submission and consolidation", () => {
 
     const queue = await listPendingReviews(pool(), admin);
     expect(queue).toHaveLength(1);
-    expect(queue[0].confidence_score).toBeGreaterThanOrEqual(0.7);
-    expect(queue[0].confidence_score).toBeLessThan(0.9);
+    expect(queue[0].confidence_score).toBeGreaterThanOrEqual(0.45);
+    expect(queue[0].confidence_score).toBeLessThan(0.6);
     expect(queue[0].explanation).toMatch(/Similarity \d/);
 
     await decideReview(admin, queue[0].id, { action: "confirm" }, "Same LMS outage");

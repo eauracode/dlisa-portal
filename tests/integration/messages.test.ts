@@ -69,7 +69,7 @@ describe("direct messages and memos", () => {
     await expect(sendMessage(admin, { type: "username", username: "nobody_here" }, msg)).rejects.toThrow(/No active student/);
   });
 
-  it("messages the author of a complaint without revealing their username", async () => {
+  it("messages the author of a complaint and shows staff their username", async () => {
     const officer = await makeAdmin("case_officer");
     const admin = await makeAdmin("union_admin");
     const s = await makeStudent();
@@ -80,7 +80,8 @@ describe("direct messages and memos", () => {
     await sendMessage(officer, { type: "reporter", complaintId }, msg);
     expect(await getStudentInbox(s)).toHaveLength(1);
     const [sent] = await listSentMessages(pool(), officer);
-    expect(sent.target_label).toMatch(/^Reporter [0-9A-F]{6} \(via their complaint\)$/);
+    const username = (await one<{ username: string }>(pool(), `select username from students where id = $1`, [s]))!.username;
+    expect(sent.target_label).toBe(`@${username} (via their complaint)`);
   });
 
   it("sends a memo to every active student", async () => {

@@ -25,9 +25,8 @@ export default function PrivacyPage() {
       </p>
       <h2 className="text-base font-semibold">Who can see your submissions</h2>
       <p>
-        Only you can see your own submissions in your dashboard. Students&apos; Association staff see you as a reporter code such as &ldquo;Reporter
-        89D22E&rdquo;, not your username. An Association Administrator can send a message to a username directly, but staff are not shown which
-        reports a username made. Messages you send in a complaint&apos;s chat are read only by Students&apos; Association staff. School management oversight officers see records only for issues escalated to them. Public pages show
+        Only you can see your own submissions in your dashboard. Students&apos; Association staff see your username and department
+        on your submissions so they can reply to you personally. Messages you send in a complaint&apos;s chat are read only by Students&apos; Association staff. School management oversight officers see records only for issues escalated to them, and see you as a reporter code rather than your username. Public pages show
         only summaries the Association has approved, with nothing that identifies anyone. Harassment and safety reports are never shown publicly.
       </p>
       <h2 className="text-base font-semibold">Answers given before</h2>

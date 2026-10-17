@@ -82,7 +82,7 @@ export function ComposeMessageForm({
           <Hint>
             {selected
               ? `This will reach the ${selected.reporters} student${selected.reporters === 1 ? "" : "s"} who reported this issue, in their private Messages inbox.`
-              : "Every student who reported the issue receives the message privately. Their usernames are not shown to you."}
+              : "Every student who reported the issue receives the message privately."}
           </Hint>
         </div>
       )}

@@ -3,7 +3,9 @@ import { audit } from "../audit";
 import { assertCan, can, canAccessIssue } from "../auth/permissions";
 import { cleanLine, cleanText, normalizeUsername } from "../validation";
 import { DEPARTMENT_CODES, departmentName } from "../departments";
-import { ActionError, loadIssueForAdmin, NotFoundError, reporterLabel, type AdminContext } from "./admin/context";
+import { ActionError, loadIssueForAdmin, NotFoundError, reporterLabel, seesStudentIdentity, type AdminContext, type IssueRow } from "./admin/context";
+import { applyStatus } from "./admin/issues";
+import { resolveComplaint, startComplaint } from "./progress";
 
 export type MessageTarget =
   | { type: "issue"; issueId: string } // everyone who reported a grouped issue
@@ -37,7 +39,7 @@ function validate(subject: string, body: string) {
 export async function sendMessage(
   admin: AdminContext,
   target: MessageTarget,
-  input: { subject: string; body: string; reusable?: boolean },
+  input: { subject: string; body: string; reusable?: boolean; resolve?: boolean },
 ): Promise<SendResult> {
   const { subject, body } = validate(input.subject, input.body);
   return withTransaction(async (tx) => {
@@ -46,6 +48,7 @@ export async function sendMessage(
     let issueId: string | null = null;
     let studentId: string | null = null;
     let complaintId: string | null = null;
+    let issueRow: IssueRow | null = null;
 
     switch (target.type) {
       case "issue": {
@@ -53,6 +56,7 @@ export async function sendMessage(
         if (issue.status === "merged") throw new ActionError("This issue was merged. Message the issue it was merged into.");
         audience = "issue";
         issueId = issue.id;
+        issueRow = issue;
         break;
       }
       case "username": {
@@ -134,6 +138,24 @@ export async function sendMessage(
     if (recipients === 0) throw new ActionError("There are no students to send this message to.");
     await tx.query(`update student_messages set recipient_count = $2 where id = $1`, [messageId, recipients]);
 
+    // Status follows the reply (see progress.ts): messaging the issue's reporters or one
+    // reporter about their complaint moves it to In progress, or to Resolved when asked.
+    const actor = { type: "admin" as const, id: admin.id };
+    if (issueRow) {
+      if (input.resolve) {
+        assertCan(admin.role, "issues.update_status");
+        await applyStatus(tx, admin, issueRow, "resolved", null);
+      } else if (["new", "under_review"].includes(issueRow.status)) {
+        await applyStatus(tx, admin, issueRow, "in_progress", null);
+      }
+    } else if (complaintId) {
+      if (input.resolve) {
+        await resolveComplaint(tx, actor, complaintId, "The Students' Association marked this as resolved. If it isn't, reply here or request a review.");
+      } else {
+        await startComplaint(tx, actor, complaintId);
+      }
+    }
+
     // The message text is not copied into the audit log.
     await audit(tx, {
       actorType: "admin",
@@ -195,9 +217,11 @@ export async function listSentMessages(db: Db, admin: AdminContext, limit = 100)
             ? "Students with an open complaint"
         : m.audience === "issue"
           ? `Reporters of “${issue_title ?? "issue"}”`
-          : target_complaint_id || !can(admin.role, "messages.send_direct")
+          : !seesStudentIdentity(admin)
             ? `${reporterLabel(target_student_id!)} (via their complaint)`
-            : `@${username}`,
+            : target_complaint_id
+              ? `@${username} (via their complaint)`
+              : `@${username}`,
   }));
 }
 

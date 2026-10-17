@@ -2,7 +2,8 @@ import { departmentName } from "./departments";
 
 /**
  * Minimum number of distinct students from one department on the same issue
- * before staff can see that department next to a reporter code.
+ * before oversight officers can see that department next to a reporter code. Association staff
+ * (administrators and case officers) see usernames and departments directly.
  * Below this, a department can identify the person.
  */
 export const DEPARTMENT_DISCLOSURE_THRESHOLD = 5;

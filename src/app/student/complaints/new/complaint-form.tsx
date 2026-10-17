@@ -91,7 +91,7 @@ export function ComplaintForm({
       <Button type="submit" size="lg" className="w-full" disabled={pending}>
         {pending ? "Submitting…" : "Submit"}
       </Button>
-      <p className="text-xs text-muted">Only you and the Students&apos; Association team can read this. Staff see a reporter code, never your username.</p>
+      <p className="text-xs text-muted">Only you and the Students&apos; Association team can read this.</p>
     </form>
   );
 }

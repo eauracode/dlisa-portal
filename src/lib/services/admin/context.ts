@@ -1,4 +1,4 @@
-import { one, type Db } from "../../db";
+import { one, rows, type Db } from "../../db";
 import { env } from "../../env";
 import { hmac } from "../../security/crypto";
 import { assertCan, canAccessIssue, type Permission } from "../../auth/permissions";
@@ -93,3 +93,22 @@ export async function loadIssueForAdmin(
 export function reporterLabel(studentId: string): string {
   return `Reporter ${hmac(env().APP_SECRET, `reporter:${studentId}`).slice(0, 6).toUpperCase()}`;
 }
+
+/**
+ * Association staff (administrators and case officers) see each student's username and
+ * department. School-management oversight officers keep the pseudonymous reporter code and
+ * the department privacy rule.
+ */
+export function seesStudentIdentity(admin: AdminContext): boolean {
+  return admin.role !== "oversight_officer";
+}
+
+/** Returns a labeller for reporters: "@username" for Association staff, else a reporter code. */
+export async function reporterNamer(db: Db, admin: AdminContext, studentIds: string[]): Promise<(studentId: string) => string> {
+  const ids = [...new Set(studentIds.filter(Boolean))];
+  if (!seesStudentIdentity(admin) || ids.length === 0) return reporterLabel;
+  const list = await rows<{ id: string; username: string }>(db, `select id, username from students where id = any($1::uuid[])`, [ids]);
+  const names = new Map(list.map((r) => [r.id, r.username]));
+  return (studentId) => (names.has(studentId) ? `@${names.get(studentId)}` : reporterLabel(studentId));
+}
+

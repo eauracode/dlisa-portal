@@ -288,7 +288,8 @@ function adminBack(fd: FormData, fallback: string): string {
 
 export async function sendMessageAction(fd: FormData) {
   const back = adminBack(fd, "/admin/messages");
-  await run(back, "Message sent", async (a) => {
+  const resolve = str(fd, "intent") === "resolve";
+  await run(back, resolve ? "Message sent and marked resolved" : "Message sent", async (a) => {
     const type = z.enum(["issue", "username", "reporter", "all", "department", "open_complaints"]).parse(str(fd, "targetType"));
     if (type === "all" && str(fd, "confirmAll") !== "on") throw new ActionError("Tick the box to confirm sending a memo to every student.");
     const target: MessageTarget =
@@ -303,7 +304,7 @@ export async function sendMessageAction(fd: FormData) {
               : { type };
     // Forms that show the reuse checkbox send reuseShown; others keep the audience default.
     const reusable = fd.has("reuseShown") ? str(fd, "reusable") === "on" : undefined;
-    await sendMessage(a, target, { subject: str(fd, "subject"), body: String(fd.get("body") ?? ""), reusable });
+    await sendMessage(a, target, { subject: str(fd, "subject"), body: String(fd.get("body") ?? ""), reusable, resolve });
     // Prepare the answer for instant reuse now, rather than on the next student's submission.
     const origin = aiRunsRemotely() ? await requestOrigin() : undefined;
     after(() => dispatchAiTask({ task: "embed-answers" }, origin).catch((err) => console.error("Answer embedding failed", { error: (err as Error).name })));
@@ -323,7 +324,9 @@ export async function setMessageReuseAction(fd: FormData) {
 /** A staff reply in one complaint's conversation (only that student sees it). */
 export async function staffReplyAction(fd: FormData) {
   const complaintId = uuidSchema.parse(str(fd, "complaintId"));
-  await run(`/admin/messages?tab=conversations&c=${complaintId}`, "Reply sent", (a) => sendStaffReply(a, complaintId, String(fd.get("body") ?? "")));
+  const resolve = str(fd, "intent") === "resolve";
+  const back = adminBack(fd, `/admin/messages?tab=conversations&c=${complaintId}`);
+  await run(back, resolve ? "Reply sent and marked resolved" : "Reply sent", (a) => sendStaffReply(a, complaintId, String(fd.get("body") ?? ""), { resolve }));
 }
 
 export async function createMemoAction(fd: FormData) {

@@ -15,7 +15,7 @@ import {
 } from "../consolidation";
 import { getPriorityConfig } from "../settings";
 import { departmentBreakdown, issueDepartmentCounts, issueDepartmentFilterSql, reporterDepartment } from "./departments";
-import { ActionError, ISSUE_COLUMNS, loadIssueForAdmin, NotFoundError, reporterLabel, type AdminContext, type IssueRow } from "./context";
+import { ActionError, ISSUE_COLUMNS, loadIssueForAdmin, NotFoundError, reporterNamer, seesStudentIdentity, type AdminContext, type IssueRow } from "./context";
 
 const OPEN_STATUSES = ["new", "under_review", "in_progress", "awaiting_external_action"];
 
@@ -144,13 +144,15 @@ export async function getIssueDetail(db: Db, admin: AdminContext, issueId: strin
     ),
   ]);
 
-  // Oversight officers need case records for escalated issues; usernames are never shown.
-  // Department labels go through the privacy rule (withheld below 5 students or when sensitive).
+  // Association staff see usernames and departments. Oversight officers need case records for
+  // escalated issues but see reporter codes, and departments under the privacy rule.
   const deptCounts = await issueDepartmentCounts(db, issueId);
+  const name = await reporterNamer(db, admin, complaints.map((c) => c.student_id));
+  const sees = seesStudentIdentity(admin);
   const reporters = complaints.map(({ student_id, department_code, ...c }) => ({
     ...c,
-    reporter: reporterLabel(student_id),
-    department: reporterDepartment(department_code, deptCounts, issue.sensitive),
+    reporter: name(student_id),
+    department: reporterDepartment(department_code, deptCounts, issue.sensitive, sees),
   }));
   return {
     issue,
@@ -257,7 +259,7 @@ const STATUS_LABELS: Record<string, string> = {
   closed: "Closed",
 };
 
-async function applyStatus(tx: Db, admin: AdminContext, issue: IssueRow, status: IssueStatus, resolutionNote: string | null) {
+export async function applyStatus(tx: Db, admin: AdminContext, issue: IssueRow, status: IssueStatus, resolutionNote: string | null) {
   if (issue.status === status) return;
   const resolving = status === "resolved" || status === "closed";
   const reopening = ["resolved", "closed"].includes(issue.status) && !resolving;
@@ -281,6 +283,8 @@ async function applyStatus(tx: Db, admin: AdminContext, issue: IssueRow, status:
   for (const c of linked) {
     // An open review request is only cleared by reopening, not by re-resolving.
     if (c.status === "review_requested" && resolving) continue;
+    // Moving an open issue along never reopens a submission that was already resolved on its own.
+    if (!resolving && !reopening && ["resolved", "closed"].includes(c.status)) continue;
     if (c.status === complaintStatus) continue;
     await tx.query(`update complaints set status = $2, updated_at = now() where id = $1`, [c.id, complaintStatus]);
     await addComplaintEvent(tx, {

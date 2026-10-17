@@ -25,8 +25,12 @@ export async function issueDepartmentCounts(db: Db, issueId: string): Promise<De
   );
 }
 
-/** Department label for one reporter on an issue, or null when it must be withheld. */
-export function reporterDepartment(code: string | null, counts: DepartmentCount[], issueIsSensitive: boolean): string | null {
+/**
+ * Department label for one reporter on an issue, or null when it must be withheld. Association
+ * staff (seesIdentity) see the department as given; oversight officers get the privacy rule.
+ */
+export function reporterDepartment(code: string | null, counts: DepartmentCount[], issueIsSensitive: boolean, seesIdentity = false): string | null {
+  if (seesIdentity) return departmentName(code);
   return departmentForStaff({
     departmentCode: code,
     sameDepartmentReportersOnIssue: counts.find((c) => c.code === code)?.students ?? 0,

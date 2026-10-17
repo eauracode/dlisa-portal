@@ -3,12 +3,14 @@ import { audit } from "../audit";
 import { assertCan, canAccessIssue } from "../auth/permissions";
 import { consumeRateLimit, RATE_LIMITS } from "../security/rate-limit";
 import { cleanText } from "../validation";
-import { ActionError, NotFoundError, reporterLabel, type AdminContext } from "./admin/context";
+import { applyStatus } from "./admin/issues";
+import { resolveComplaint, startComplaint } from "./progress";
+import { ActionError, loadIssueForAdmin, NotFoundError, reporterNamer, seesStudentIdentity, type AdminContext } from "./admin/context";
 import { issueDepartmentCounts, reporterDepartment } from "./admin/departments";
 
 /*
- * The two-way conversation on a complaint: its owner and Association staff. Staff only ever see a
- * reporter code; students never see which staff member replied.
+ * The two-way conversation on a complaint: its owner and Association staff. Association staff see the
+ * student's username (oversight officers a reporter code); students never see which staff member replied.
  */
 
 export const REPLY_MAX = 2000;
@@ -70,8 +72,12 @@ async function loadComplaintForStaff(db: Db, admin: AdminContext, complaintId: s
   return { complaint: c, issue };
 }
 
-/** A staff reply: only this student sees it, in their complaint's chat. */
-export async function sendStaffReply(admin: AdminContext, complaintId: string, body: string) {
+/**
+ * A staff reply: only this student sees it, in their complaint's chat. Replying moves the
+ * submission (and its issue) to In progress; `resolve` marks this submission Resolved instead
+ * (the issue follows once all of its submissions are resolved). See progress.ts.
+ */
+export async function sendStaffReply(admin: AdminContext, complaintId: string, body: string, opts: { resolve?: boolean } = {}) {
   assertCan(admin.role, "messages.send_issue");
   const text = cleanBody(body);
   await withTransaction(async (tx) => {
@@ -80,7 +86,16 @@ export async function sendStaffReply(admin: AdminContext, complaintId: string, b
     await tx.query(`insert into complaint_messages (complaint_id, sender_type, author_admin_id, body) values ($1, 'staff', $2, $3)`, [complaintId, admin.id, text]);
     await tx.query(`update complaint_messages set read_by_staff_at = now() where complaint_id = $1 and sender_type = 'student' and read_by_staff_at is null`, [complaintId]);
     if (issue) await tx.query(`update consolidated_issues set last_activity_at = now() where id = $1`, [issue.id]);
-    await audit(tx, { actorType: "admin", actorId: admin.id, action: "complaint.staff_reply", entityType: "complaint", entityId: complaintId });
+    const actor = { type: "admin" as const, id: admin.id };
+    if (opts.resolve) {
+      await resolveComplaint(tx, actor, complaintId, "The Students' Association marked this as resolved. If it isn't, reply here or request a review.");
+    } else {
+      if (issue && ["new", "under_review"].includes(issue.status)) {
+        await applyStatus(tx, admin, await loadIssueForAdmin(tx, admin, issue.id, { forUpdate: true }), "in_progress", null);
+      }
+      await startComplaint(tx, actor, complaintId);
+    }
+    await audit(tx, { actorType: "admin", actorId: admin.id, action: opts.resolve ? "complaint.staff_reply_resolved" : "complaint.staff_reply", entityType: "complaint", entityId: complaintId });
   });
 }
 
@@ -126,10 +141,12 @@ export async function listConversations(db: Db, admin: AdminContext, limit = 100
   );
   const countsByIssue = new Map<string, Awaited<ReturnType<typeof issueDepartmentCounts>>>();
   for (const r of list) if (r.issue_id && !countsByIssue.has(r.issue_id)) countsByIssue.set(r.issue_id, await issueDepartmentCounts(db, r.issue_id));
+  const name = await reporterNamer(db, admin, list.map((r) => r.student_id));
+  const sees = seesStudentIdentity(admin);
   return list.map(({ student_id, department_code, sensitive, ...r }) => ({
     ...r,
-    reporter: reporterLabel(student_id),
-    department: r.issue_id ? reporterDepartment(department_code, countsByIssue.get(r.issue_id) ?? [], !!sensitive) : null,
+    reporter: name(student_id),
+    department: sees || r.issue_id ? reporterDepartment(department_code, countsByIssue.get(r.issue_id ?? "") ?? [], !!sensitive, sees) : null,
   }));
 }
 
@@ -160,10 +177,12 @@ export async function getStaffConversation(admin: AdminContext, complaintId: str
     const counts = issue ? await issueDepartmentCounts(tx, issue.id) : [];
     const flag = await one<{ v: boolean }>(tx, `select exists (select 1 from instant_answers na where na.complaint_id = $1 and na.helpful = false
                    and not exists (select 1 from complaint_messages sr where sr.complaint_id = $1 and sr.sender_type = 'staff' and sr.created_at > na.feedback_at)) as v`, [complaintId]);
+    const name = await reporterNamer(tx, admin, [complaint.student_id]);
+    const sees = seesStudentIdentity(admin);
     return {
       complaint_id: complaint.id,
-      reporter: reporterLabel(complaint.student_id),
-      department: issue ? reporterDepartment(complaint.department_code, counts, issue.sensitive) : null,
+      reporter: name(complaint.student_id),
+      department: sees || issue ? reporterDepartment(complaint.department_code, counts, issue?.sensitive ?? true, sees) : null,
       subject: complaint.subject,
       status: complaint.status,
       issue: issue ? { id: issue.id, title: issue.title, status: issue.status } : null,
