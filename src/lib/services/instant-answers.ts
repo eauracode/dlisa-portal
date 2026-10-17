@@ -110,15 +110,25 @@ export async function recordInstantAnswers(tx: Db, complaintId: string, answers:
   }
 }
 
-/** A submission that joins a grouped issue also receives the replies already sent to it. */
-export async function deliverIssueAnswers(tx: Db, complaintId: string, issueId: string) {
+/**
+ * A submission that joins a grouped issue also receives the replies already sent to it.
+ *
+ * When it arrives through a merge, it receives every reply sent to everyone on the issue
+ * (the reuse setting and the 3-reply limit apply only to ordinary grouping, where the match
+ * is automatic). Replies the student already received are never sent again.
+ */
+export async function deliverIssueAnswers(tx: Db, complaintId: string, issueId: string, opts: { merge?: boolean } = {}) {
   const earlier = await rows<{ id: string }>(
     tx,
     `select m.id from student_messages m
-      where m.reusable and m.audience = 'issue'
+      where m.audience = 'issue'
+        and ($2 or m.reusable)
         and m.target_issue_id in (select id from consolidated_issues where id = $1 or merged_into_id = $1)
-      order by m.created_at desc limit 3`,
-    [issueId],
+        and not exists (select 1 from student_message_recipients r join complaints c on c.student_id = r.student_id
+                         where r.message_id = m.id and c.id = $3)
+      order by m.created_at desc
+      limit case when $2 then null else 3 end`,
+    [issueId, !!opts.merge, complaintId],
   );
   await recordInstantAnswers(tx, complaintId, earlier.map((m) => ({ messageId: m.id, similarity: 1 })), "same_issue");
 }
@@ -158,7 +168,7 @@ export async function recordAnswerFeedback(studentId: string, complaintId: strin
 }
 
 export const ANSWER_CONFIRMED_NOTE =
-  "Answered instantly with an earlier Student Union reply. Every student who reported this confirmed the answer resolved their question.";
+  "Answered instantly with an earlier Students' Association reply. Every student who reported this confirmed the answer resolved their question.";
 
 /**
  * "Yes, this answered my question": records the feedback and resolves the student's own
@@ -183,7 +193,7 @@ export async function confirmAnswerResolved(studentId: string, complaintId: stri
       eventType: "status_changed",
       previousValue: c.status,
       newValue: "resolved",
-      message: "You confirmed the Student Union's answer resolved your question.",
+      message: "You confirmed the Students' Association's answer resolved your question.",
     });
     await audit(tx, { actorType: "student", actorId: studentId, action: "complaint.answer_confirmed", entityType: "complaint", entityId: complaintId, metadata: { messageId } });
 
@@ -224,12 +234,12 @@ export async function listInstantAnswersForComplaint(db: Db, complaintId: string
   );
 }
 
-/** Union administrators, or the staff member who wrote the message, can change reuse. */
+/** Association administrators, or the staff member who wrote the message, can change reuse. */
 export async function setMessageReusable(admin: AdminContext, messageId: string, reusable: boolean) {
   await withTransaction(async (tx) => {
     const m = await one<{ author_admin_id: string }>(tx, `select author_admin_id from student_messages where id = $1 for update`, [messageId]);
     if (!m) throw new NotFoundError("Message");
-    if (admin.role !== "union_admin" && m.author_admin_id !== admin.id) throw new ActionError("Only the author or a Union Administrator can change this.");
+    if (admin.role !== "union_admin" && m.author_admin_id !== admin.id) throw new ActionError("Only the author or an Association Administrator can change this.");
     await tx.query(`update student_messages set reusable = $2 where id = $1`, [messageId, reusable]);
     await audit(tx, {
       actorType: "admin",

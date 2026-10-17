@@ -119,7 +119,7 @@ export function ComposeMessageForm({
       <div>
         <Label htmlFor="body">Message</Label>
         <Textarea id="body" name="body" required minLength={5} maxLength={4000} rows={7} placeholder="Write the message students will read." />
-        <Hint>Students see this as coming from the DLI Student Union. Do not promise dates or outcomes that have not been confirmed.</Hint>
+        <Hint>Students see this as coming from the DLI Students&apos; Association. Do not promise dates or outcomes that have not been confirmed.</Hint>
       </div>
       {/* Re-mounted per audience so the default follows it: direct replies are not reused unless chosen. */}
       <ReuseCheckbox key={type} defaultChecked={type !== "username"} personal={type === "username"} />

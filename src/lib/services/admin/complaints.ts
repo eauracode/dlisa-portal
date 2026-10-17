@@ -33,7 +33,7 @@ export interface AdminComplaintRow {
 }
 
 /**
- * Union administrators see every complaint (including unmatched ones). Other roles see only
+ * Association administrators see every complaint (including unmatched ones). Other roles see only
  * complaints attached to issues within their scope.
  */
 export async function listComplaints(db: Db, admin: AdminContext, f: ComplaintFilters): Promise<AdminComplaintRow[]> {

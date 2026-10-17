@@ -1,4 +1,4 @@
-// Single place to swap branding when the Union supplies official files.
+// Single place to swap branding when the Association supplies official files.
 export const brand = {
   portalName: "DLI Support Portal",
   portalTagline: "Student Welfare & Academic Support",

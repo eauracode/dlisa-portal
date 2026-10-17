@@ -27,7 +27,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Memos</h1>
-        <p className="mt-1 max-w-[62ch] text-[var(--muted)]">Official notices from the DLI Student Union, plus progress on problems many students have reported.</p>
+        <p className="mt-1 max-w-[62ch] text-[var(--muted)]">Official notices from the DLI Students&apos; Association, plus progress on problems many students have reported.</p>
       </div>
       <nav aria-label="Filter" className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -43,7 +43,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
       </nav>
 
       {feed.length === 0 ? (
-        <EmptyState title="Nothing here yet.">Notices from the Student Union and updates on commonly reported problems will appear here.</EmptyState>
+        <EmptyState title="Nothing here yet.">Notices from the Students&apos; Association and updates on commonly reported problems will appear here.</EmptyState>
       ) : (
         <ul className="grid gap-3">
           {feed.map((c) =>
@@ -61,7 +61,7 @@ export default async function MemosPage({ searchParams }: { searchParams: Promis
                     {c.isNew && <FlagBadge tone="brand">New</FlagBadge>}
                   </div>
                   <h2 className="mb-1 mt-2 break-words text-base font-semibold">{c.title}</h2>
-                  <p className="text-xs text-[var(--muted)]">DLI Student Union · {formatDateTime(c.publishedAt)}</p>
+                  <p className="text-xs text-[var(--muted)]">DLI Students&apos; Association · {formatDateTime(c.publishedAt)}</p>
                   <p className="mt-2 whitespace-pre-line break-words text-sm">{c.body}</p>
                 </article>
               </li>

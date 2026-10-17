@@ -41,7 +41,7 @@ export default async function AdminConsoleLayout({ children }: { children: React
         <Link href="/admin" className="flex w-full flex-wrap items-center gap-2.5 px-2 pb-2 text-white no-underline min-[760px]:px-1 min-[760px]:pb-4">
           <LogoMarks size={36} onDark />
           <span className="text-[15px] font-semibold">
-            Union Console
+            Association Console
             <small className="block text-xs font-normal text-[#D9BCC5]">Staff only</small>
           </span>
         </Link>

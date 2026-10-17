@@ -2,7 +2,7 @@ import { brand } from "./brand";
 
 /**
  * App configuration. Branding (names, logos, footer credit) lives in ./brand.ts and colours in
- * src/styles/theme-tokens.css, so the Union can swap them without touching any pages.
+ * src/styles/theme-tokens.css, so the Association can swap them without touching any pages.
  */
 export const APP_CONFIG = {
   name: brand.fullName,
@@ -16,7 +16,7 @@ export const APP_CONFIG = {
 
 export const COPY = {
   acknowledgement:
-    "Your submission has been received. The DLI Student Union team will review it and provide updates through your dashboard. You can return at any time to check its status.",
+    "Your submission has been received. The DLI Students' Association team will review it and provide updates through your dashboard. You can return at any time to check its status.",
   noDeadline: "An expected resolution time has not yet been confirmed.",
   matchedExisting:
     "Your concern matches an existing issue that is already being addressed. Your submission has been added to that issue. You can follow updates from this page.",

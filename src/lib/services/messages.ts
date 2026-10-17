@@ -164,7 +164,7 @@ export interface SentMessage {
   target_issue_id: string | null;
 }
 
-/** Message history. Union administrators see all messages; others see only their own. */
+/** Message history. Association administrators see all messages; others see only their own. */
 export async function listSentMessages(db: Db, admin: AdminContext, limit = 100): Promise<SentMessage[]> {
   assertCan(admin.role, "messages.view");
   const own = admin.role !== "union_admin";
@@ -288,7 +288,7 @@ export interface GeneralMessage {
 }
 
 /**
- * The student Messages page: one row per complaint with something from the Union, newest
+ * The student Messages page: one row per complaint with something from the Association, newest
  * first, plus messages not tied to a complaint (direct, department, open-complaint). Memos are
  * on the Memos page. Opening this page marks the general messages read.
  */

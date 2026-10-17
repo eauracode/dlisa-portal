@@ -34,7 +34,7 @@ export async function updateAdmin(admin: AdminContext, targetId: string, input: 
     const losingAdmin = target.role === "union_admin" && target.active && (input.role !== "union_admin" || !input.active);
     if (losingAdmin) {
       const others = await one<{ n: number }>(tx, `select count(*)::int as n from admin_users where role = 'union_admin' and active and id <> $1`, [targetId]);
-      if (!others?.n) throw new ActionError("At least one active Union Administrator must remain.");
+      if (!others?.n) throw new ActionError("At least one active Association Administrator must remain.");
     }
     await tx.query(`update admin_users set role = $2, active = $3, updated_at = now() where id = $1`, [targetId, input.role, input.active]);
     if (!input.active || input.role !== target.role) await destroyAllSessionsFor(tx, { type: "admin", adminId: targetId });

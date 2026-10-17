@@ -149,7 +149,7 @@ export async function listMemosForStaff(db: Db, admin: AdminContext): Promise<St
   );
 }
 
-/** Union Admins publish; Case Officers can only save drafts for an Admin to publish. */
+/** Association Admins publish; Case Officers can only save drafts for an Admin to publish. */
 export async function createMemo(admin: AdminContext, input: { title: string; body: string; pinned: boolean; public: boolean; publish: boolean }) {
   const { title, body } = validate(input.title, input.body);
   if (input.publish) {

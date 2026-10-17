@@ -94,6 +94,11 @@ async function Conversations({ admin, selected }: { admin: Admin; selected: stri
                 <span className="shrink-0 text-xs text-muted">{relativeTime(c.last_at)}</span>
               </span>
               {c.department && <span className="mt-0.5 inline-block rounded bg-sunken px-1.5 text-[11px] text-muted">{c.department}</span>}
+              {c.needs_personal_reply && (
+                <span className="mt-1 block">
+                  <Badge tone="warning">Answer not helpful: reply individually</Badge>
+                </span>
+              )}
               <span className="mt-0.5 block truncate text-xs text-muted">{c.issue_title ?? c.subject}</span>
               <span className="mt-1 flex items-center justify-between gap-2">
                 <span className="truncate text-sm text-muted">
@@ -137,6 +142,11 @@ async function Conversations({ admin, selected }: { admin: Admin; selected: stri
             </div>
             <ComplaintStatusBadge status={thread.status} />
           </header>
+          {thread.needs_personal_reply && (
+            <p className="border-b border-border bg-warn-bg px-4 py-2.5 text-sm text-warn-fg">
+              <b>This student said an earlier answer was not helpful.</b> Please reply to them individually below.
+            </p>
+          )}
           <div role="log" aria-label="Messages" className="chat-body flex max-h-[60vh] flex-1 flex-col gap-2 overflow-y-auto bg-sunken px-4 py-4">
             {thread.messages.map((m) =>
               m.sender_type === "student" ? (
@@ -224,7 +234,7 @@ async function Memos({ admin }: { admin: Admin }) {
                 Save draft
               </Button>
             </div>
-            {!canPublish && <p className="text-xs text-muted">As a Case Officer you can save drafts. A Union Administrator publishes them.</p>}
+            {!canPublish && <p className="text-xs text-muted">As a Case Officer you can save drafts. An Association Administrator publishes them.</p>}
           </form>
         </CardContent>
       </Card>
@@ -319,7 +329,7 @@ async function Bulk({ admin, defaultIssueId }: { admin: Admin; defaultIssueId?: 
             <Link href="/admin/messages?tab=memos">Memos</Link> for notices meant for all students.
           </p>
           {admin.role === "case_officer" && (
-            <p className="mt-2 text-xs text-muted">As a Case Officer you can message reporters of issues assigned to you. Other audiences are sent by a Union Administrator.</p>
+            <p className="mt-2 text-xs text-muted">As a Case Officer you can message reporters of issues assigned to you. Other audiences are sent by an Association Administrator.</p>
           )}
         </CardContent>
       </Card>

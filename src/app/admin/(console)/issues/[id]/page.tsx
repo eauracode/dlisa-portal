@@ -44,7 +44,7 @@ function Hidden({ issueId }: { issueId: string }) {
 
 const ROLE_NOTE: Record<string, string | undefined> = {
   case_officer:
-    "As a Case Officer you can respond and schedule. Triage, escalation and restructuring are handled by the Union Administrator — you can propose a date or an escalation under Schedule.",
+    "As a Case Officer you can respond and schedule. Triage, escalation and restructuring are handled by the Association Administrator — you can propose a date or an escalation under Schedule.",
   oversight_officer: "As an Oversight Officer you can record official responses, add oversight notes and update the escalation status.",
 };
 
@@ -598,7 +598,7 @@ export default async function AdminIssuePage({ params, searchParams }: { params:
                       <div key={n.id} className="rounded-[var(--radius-m)] border border-violet-fg/30 bg-violet-bg px-3.5 py-3 text-sm">
                         <p className="mb-1.5 flex justify-between gap-2 text-xs text-muted">
                           <b className="text-violet-fg">Restricted oversight note</b>
-                          <span>Union Admin and management</span>
+                          <span>Association Admin and management</span>
                         </p>
                         <p className="whitespace-pre-line">{n.note}</p>
                         <p className="mt-1 text-xs text-muted">
@@ -609,7 +609,7 @@ export default async function AdminIssuePage({ params, searchParams }: { params:
                       <div key={n.id} className="rounded-[var(--radius-m)] border border-border bg-sunken px-3.5 py-3 text-sm">
                         <p className="mb-1.5 flex justify-between gap-2 text-xs text-muted">
                           <b className="text-foreground">Internal note</b>
-                          <span>Union staff only</span>
+                          <span>Association staff only</span>
                         </p>
                         <p className="whitespace-pre-line">{n.note}</p>
                         <p className="mt-1 text-xs text-muted">

@@ -28,7 +28,7 @@ export function DepartmentSelect({ error, defaultValue }: { error?: string; defa
         ))}
       </select>
       <p id="department-hint" className="mt-1.5 text-[13px] text-[var(--muted)]">
-        Saved with your username so the Union can route complaints to the right people. You only pick it once.
+        Saved with your username so the Association can route complaints to the right people. You only pick it once.
       </p>
       {error && (
         <p id="department-error" className="mt-1.5 text-[13px] font-medium text-[var(--danger-fg)]">

@@ -1,12 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closePool, one, pool } from "@/lib/db";
 import { getStudentComplaint, listMyComplaints, requestComplaintReview, submitComplaint } from "@/lib/services/student-complaints";
-import { assignOfficer, changeStatus, setPublicVisibility } from "@/lib/services/admin/issues";
+import { assignOfficer, changeStatus, mergeIssues, setPublicVisibility } from "@/lib/services/admin/issues";
 import { getStudentMessagesOverview, getUnreadMessageCount, sendMessage } from "@/lib/services/messages";
 import { countUnreadForStaff, getStaffConversation, listConversations, sendStaffReply, sendStudentReply } from "@/lib/services/conversations";
 import { buildStudentThread, loadStudentThread } from "@/lib/services/student-thread";
 import { archiveMemo, countUnreadMemos, createMemo, getMemoFeed, listMemosForStaff, mergeMemoFeed, publishDraft, type MemoCard } from "@/lib/services/memos";
-import { getInstantAnswers } from "@/lib/services/instant-answers";
+import { getInstantAnswers, recordAnswerFeedback } from "@/lib/services/instant-answers";
 import { ForbiddenError } from "@/lib/auth/permissions";
 import { NotFoundError } from "@/lib/services/admin/context";
 import { registerStudent } from "@/lib/auth/student-auth";
@@ -112,7 +112,7 @@ describe("the student conversation", () => {
 });
 
 describe("memos", () => {
-  it("only Union Admins publish; Case Officers save drafts that students never see", async () => {
+  it("only Association Admins publish; Case Officers save drafts that students never see", async () => {
     const [admin, officer] = [await makeAdmin("union_admin"), await makeAdmin("case_officer")];
     const early = await makeStudent();
     await expect(createMemo(officer, { title: "Exam week", body: "#lms Exams start Monday.", pinned: false, public: false, publish: true })).rejects.toBeInstanceOf(ForbiddenError);
@@ -200,5 +200,49 @@ describe("bulk messages", () => {
     await report(await makeStudent());
     const [row] = await listMyComplaints(s);
     for (const key of Object.keys(row)) expect(key).not.toMatch(/count|reporter/i);
+  });
+});
+
+describe("merging issues and not-helpful answers", () => {
+  it("gives merged-in reporters every earlier reply to the surviving issue, once, with feedback", async () => {
+    const admin = await makeAdmin("union_admin");
+    const [a, b] = [await makeStudent(), await makeStudent()];
+    const kept = await report(a); // #lms issue
+    const moved = await report(b, "#fees The fees portal charged me twice for one payment.");
+    const [keptIssue, movedIssue] = [(await complaintRow(kept))!.consolidated_issue_id!, (await complaintRow(moved))!.consolidated_issue_id!];
+    expect(keptIssue).not.toBe(movedIssue);
+
+    const ids: string[] = [];
+    for (let i = 1; i <= 4; i++) ids.push((await sendMessage(admin, { type: "issue", issueId: keptIssue }, { subject: `Update ${i}`, body: `Progress note number ${i}.`, reusable: i !== 2 })).messageId);
+    const ownReply = await sendMessage(admin, { type: "issue", issueId: movedIssue }, { subject: "About your fees", body: "We are checking the double charge." });
+
+    await mergeIssues(admin, movedIssue, keptIssue, "Same underlying problem");
+    const answers = await getInstantAnswers(b, moved);
+    // All four (including the one not marked for reuse), none of their own earlier replies.
+    expect(answers.map((x) => x.message_id).sort()).toEqual([...ids].sort());
+    expect(answers.every((x) => x.source === "same_issue" && x.helpful === null)).toBe(true);
+    expect(answers.some((x) => x.message_id === ownReply.messageId)).toBe(false);
+  });
+
+  it("flags a not-helpful answer for a personal reply until staff respond", async () => {
+    const admin = await makeAdmin("union_admin");
+    await makeStudent();
+    const memo = await sendMessage(admin, { type: "all" }, { subject: "LMS restored", body: "#lms The LMS is back." });
+    const s = await makeStudent();
+    const id = await report(s);
+    expect((await listConversations(pool(), admin)).find((c) => c.complaint_id === id)).toBeUndefined();
+
+    await recordAnswerFeedback(s, id, memo.messageId, false);
+    const row = (await listConversations(pool(), admin)).find((c) => c.complaint_id === id)!;
+    expect(row.needs_personal_reply).toBe(true);
+    expect(await countUnreadForStaff(pool(), admin)).toBe(1);
+    expect((await getStaffConversation(admin, id)).needs_personal_reply).toBe(true);
+
+    await sendStudentReply(s, id, "It still does not load for me.");
+    expect(await countUnreadForStaff(pool(), admin)).toBe(1); // counted once, not twice
+
+    await sendStaffReply(admin, id, "Sorry about that. We have reset your LMS access; please try again.");
+    expect((await listConversations(pool(), admin)).find((c) => c.complaint_id === id)!.needs_personal_reply).toBe(false);
+    expect(await countUnreadForStaff(pool(), admin)).toBe(0);
   });
 });

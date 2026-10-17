@@ -15,7 +15,7 @@ export default async function AdminLoginPage() {
         <p className="text-xs text-muted">{brand.portalName}</p>
         <div>
           <h1 className="text-lg font-semibold">Staff sign in</h1>
-          <p className="text-xs text-muted">DLI Student Union and authorised school management</p>
+          <p className="text-xs text-muted">DLI Students&apos; Association and authorised school management</p>
         </div>
       </div>
       <Card>
@@ -23,7 +23,7 @@ export default async function AdminLoginPage() {
           <AdminLoginForm />
         </CardContent>
       </Card>
-      <p className="mt-4 text-xs text-muted">Accounts are created by a Union Administrator. All administrative actions are logged.</p>
+      <p className="mt-4 text-xs text-muted">Accounts are created by an Association Administrator. All administrative actions are logged.</p>
     </main>
   );
 }

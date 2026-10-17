@@ -1,4 +1,4 @@
-/** Round initials avatar for chat bubbles: the Union (DLI), management (MGT) or a reporter (R). */
+/** Round initials avatar for chat bubbles: the Association (DLI), management (MGT) or a reporter (R). */
 export function BotAvatar({ small, label = "DLI", tone = "brand" }: { small?: boolean; label?: string; tone?: "brand" | "mgt" | "reporter" }) {
   const bg = tone === "mgt" ? "bg-[var(--violet-fg)]" : tone === "reporter" ? "bg-[var(--neutral-fg)]" : "bg-[var(--brand-600)]";
   return (

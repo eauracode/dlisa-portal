@@ -18,7 +18,7 @@ const PROGRESS = ["in_progress", "awaiting_external_action"];
 const RESOLVED = ["resolved", "closed"];
 
 function activityText(a: ActivityItem): string {
-  if (a.kind === "reply") return "The Student Union replied";
+  if (a.kind === "reply") return "The Students' Association replied";
   if (a.kind === "update") return "An update was published";
   return a.detail === "resolved" ? "Marked as resolved" : `Status changed to ${COMPLAINT_STATUS_LABELS[a.detail ?? ""] ?? a.detail}`;
 }
@@ -82,7 +82,7 @@ export default async function StudentHomePage({ searchParams }: { searchParams: 
             {[
               { href: "/student/complaints/new", icon: "plus" as const, label: "Start a complaint or suggestion", n: 0 },
               { href: "/student/messages", icon: "bell" as const, label: "Notifications", n: unreadMessages },
-              { href: "/memos", icon: "memo" as const, label: "Union memos", n: unreadMemos },
+              { href: "/memos", icon: "memo" as const, label: "Association memos", n: unreadMemos },
               { href: "/privacy", icon: "shield" as const, label: "How your privacy works", n: 0 },
             ].map((l) => (
               <li key={l.href}>
@@ -104,7 +104,7 @@ export default async function StudentHomePage({ searchParams }: { searchParams: 
           <EmptyState title={COPY.emptyDashboard} />
         ) : activity.length === 0 ? (
           <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted)]">
-            Nothing new yet. Replies and updates from the Student Union will show up here.
+            Nothing new yet. Replies and updates from the Students&apos; Association will show up here.
           </p>
         ) : (
           <ul className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">

@@ -2,7 +2,7 @@
 -- bulk messages to a department or to students with an open complaint. Additive only.
 
 -- 1) Complaint conversation --------------------------------------------------
--- One row per chat message between the complaint's owner and Union staff. Updates, status
+-- One row per chat message between the complaint's owner and Association staff. Updates, status
 -- changes, official responses and staff messages to an issue stay in their own tables; the
 -- student thread merges them at read time (src/lib/services/student-thread.ts).
 create table if not exists complaint_messages (

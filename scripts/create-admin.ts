@@ -9,7 +9,7 @@ import { adminPasswordSchema, ADMIN_ROLES, type AdminRole } from "../src/lib/val
 /**
  * Secure provisioning of administrator accounts (there are no default credentials).
  *
- *   npm run admin:create -- --email chair@example.org --name "Union Chair" --role union_admin
+ *   npm run admin:create -- --email chair@example.org --name "Association Chair" --role union_admin
  *
  * The password is read from the ADMIN_PASSWORD environment variable or prompted for, so
  * it never appears in shell history. The account must change it at first login.

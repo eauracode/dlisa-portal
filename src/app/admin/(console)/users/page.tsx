@@ -24,7 +24,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <Flash ok={sp.ok} err={sp.err} />
-      <PageHeader title="Staff accounts" description="Create accounts for Union staff and school management oversight officers. Deactivating an account signs it out immediately." />
+      <PageHeader title="Staff accounts" description="Create accounts for Association staff and school management oversight officers. Deactivating an account signs it out immediately." />
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <Table>
           <thead>

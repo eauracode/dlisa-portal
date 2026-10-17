@@ -1,5 +1,5 @@
 -- Instant answers: staff messages become a reusable answer library, so a student who asks
--- something the Student Union has already answered gets that answer straight away.
+-- something the Students' Association has already answered gets that answer straight away.
 -- Additive only.
 
 -- Whether a message may be shown to other students who ask the same thing. Memos and replies

@@ -53,7 +53,7 @@ async function main() {
     if (!res.ok) throw new Error(`Could not create ${email}`);
     return { id: res.id, role, display_name: displayName };
   };
-  const chair = await makeAdmin("union.admin@demo.local", "Demo Union Administrator", "union_admin");
+  const chair = await makeAdmin("union.admin@demo.local", "Demo Association Administrator", "union_admin");
   const officer = await makeAdmin("case.officer@demo.local", "Demo Case Officer", "case_officer");
   await makeAdmin("oversight@demo.local", "Demo Oversight Officer", "oversight_officer");
 

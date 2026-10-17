@@ -25,12 +25,12 @@ export default async function StudentMessagesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
         <p className="mt-1 text-[var(--muted)]">
-          Your conversations with the Student Union. General notices are in <Link href="/memos">Memos</Link>.
+          Your conversations with the Students&apos; Association. General notices are in <Link href="/memos">Memos</Link>.
         </p>
       </div>
 
       {complaints.length === 0 && general.length === 0 ? (
-        <EmptyState title="No messages yet.">When the Student Union replies to one of your complaints or suggestions, the conversation will appear here.</EmptyState>
+        <EmptyState title="No messages yet.">When the Students&apos; Association replies to one of your complaints or suggestions, the conversation will appear here.</EmptyState>
       ) : (
         <>
           {complaints.length > 0 && (
@@ -76,7 +76,7 @@ export default async function StudentMessagesPage() {
                           {!m.read_at && <FlagBadge tone="brand">New</FlagBadge>}
                         </div>
                         <h3 className="mb-1 mt-1.5 break-words text-base font-semibold">{m.subject}</h3>
-                        <p className="text-xs text-[var(--muted)]">DLI Student Union · {formatDateTime(m.created_at)}</p>
+                        <p className="text-xs text-[var(--muted)]">DLI Students&apos; Association · {formatDateTime(m.created_at)}</p>
                         <p className="mt-2 whitespace-pre-line break-words text-sm">{m.body}</p>
                       </article>
                     </li>

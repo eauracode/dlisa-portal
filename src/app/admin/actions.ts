@@ -160,7 +160,7 @@ export async function escalationStatusAction(fd: FormData) {
 
 export async function proposeAction(fd: FormData) {
   const type = z.enum(["deadline", "escalation"]).parse(str(fd, "type"));
-  await run(issuePath(fd), "Proposal sent to the Union Administrator", (a) =>
+  await run(issuePath(fd), "Proposal sent to the Association Administrator", (a) =>
     issues.createProposal(a, id(fd), { type, deadline: type === "deadline" ? optionalDateTime.parse(str(fd, "deadline")) : null, reason: str(fd, "reason") }),
   );
 }

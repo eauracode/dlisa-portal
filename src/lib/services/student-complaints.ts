@@ -203,7 +203,7 @@ export async function requestComplaintReview(studentId: string, complaintId: str
     await tx.query(
       `insert into complaint_events (complaint_id, actor_type, actor_id, event_type, previous_value, new_value, message)
        values ($1, 'student', app_current_student_id(), 'review_requested', $2, 'review_requested',
-               'You requested a review because the concern remains unresolved. The Student Union team will look at it again.')`,
+               'You requested a review because the concern remains unresolved. The Students'' Association team will look at it again.')`,
       [complaintId, c.status],
     );
     // The student's reason also appears in the complaint's conversation, so staff see it there.
@@ -232,7 +232,7 @@ export interface MyComplaintRow extends DashboardComplaint {
 
 /**
  * "My complaints": the student's own submissions with a one-line preview of the latest thing
- * from the Union and an unread marker. Row-level security limits this to their own rows.
+ * from the Association and an unread marker. Row-level security limits this to their own rows.
  */
 export async function listMyComplaints(studentId: string, opts: { filter?: ComplaintListFilter; q?: string } = {}): Promise<MyComplaintRow[]> {
   const filter = opts.filter ?? "all";

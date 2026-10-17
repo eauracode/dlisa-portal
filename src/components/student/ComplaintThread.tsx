@@ -22,7 +22,7 @@ const REPLY_ERRORS: Record<string, string> = {
 };
 
 /**
- * The conversation with the Student Union. Server component; the reply box is a plain form
+ * The conversation with the Students' Association. Server component; the reply box is a plain form
  * posting to a server action, so it works without JavaScript.
  */
 export function ComplaintThread(props: {
@@ -48,7 +48,7 @@ export function ComplaintThread(props: {
         </Link>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold leading-snug sm:text-[15px]">{props.title}</h1>
-          <small className="text-xs text-[var(--muted)]">{props.category} · with DLI Student Union</small>
+          <small className="text-xs text-[var(--muted)]">{props.category} · with DLI Students&apos; Association</small>
         </div>
         <span className="hidden sm:block">{props.statusBadge}</span>
       </header>
@@ -63,7 +63,7 @@ export function ComplaintThread(props: {
       </div>
       {props.progress}
 
-      <div id="thread-log" role="log" aria-label="Conversation with the Student Union" className="chat-body flex flex-1 flex-col gap-2 overflow-y-auto bg-[var(--sunken)] px-3 py-[18px] sm:px-4">
+      <div id="thread-log" role="log" aria-label="Conversation with the Students' Association" className="chat-body flex flex-1 flex-col gap-2 overflow-y-auto bg-[var(--sunken)] px-3 py-[18px] sm:px-4">
         {props.events.map((e, i) => {
           const day = formatDay(e.at);
           const sep = i === 0 || formatDay(props.events[i - 1].at) !== day ? <span className="daysep">{day}</span> : null;
@@ -88,7 +88,7 @@ export function ComplaintThread(props: {
           )}
           <div className="flex items-end gap-2">
             <label htmlFor="reply-body" className="sr-only">
-              Message the Student Union
+              Message the Students&apos; Association
             </label>
             <textarea
               id="reply-body"
@@ -96,14 +96,14 @@ export function ComplaintThread(props: {
               required
               maxLength={2000}
               rows={1}
-              placeholder="Message the Student Union…"
+              placeholder="Message the Students' Association…"
               className="max-h-40 min-h-11 flex-1 resize-none rounded-[22px] border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2.5 text-base [field-sizing:content]"
             />
             <button type="submit" aria-label="Send" className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-[var(--brand-600)] text-white">
               <Icon name="send" />
             </button>
           </div>
-          <p className="mt-2 text-center text-xs text-[var(--muted)]">Only you and the Student Union team can read this conversation.</p>
+          <p className="mt-2 text-center text-xs text-[var(--muted)]">Only you and the Students&apos; Association team can read this conversation.</p>
         </form>
       ) : (
         <p className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-center text-sm text-[var(--muted)]">This complaint is closed, so new messages can&apos;t be added.</p>
@@ -177,19 +177,19 @@ function Event({ e, complaintId }: { e: ThreadEvent; complaintId: string }) {
       );
     case "review_response":
       return (
-        <Them label="Response to your review request" meta={`DLI Student Union · ${t}`}>
+        <Them label="Response to your review request" meta={`DLI Students' Association · ${t}`}>
           {e.body}
         </Them>
       );
     case "update":
       return (
-        <Them label="Update" tone="update" meta={`DLI Student Union · ${t}`}>
+        <Them label="Update" tone="update" meta={`DLI Students' Association · ${t}`}>
           {e.body}
         </Them>
       );
     case "official":
       return (
-        <Them label="Official response · School management" tone="official" meta={`Recorded by the Student Union · ${t}`} avatar={<BotAvatar small label="MGT" tone="mgt" />}>
+        <Them label="Official response · School management" tone="official" meta={`Recorded by the Students' Association · ${t}`} avatar={<BotAvatar small label="MGT" tone="mgt" />}>
           {e.body}
         </Them>
       );
@@ -197,13 +197,13 @@ function Event({ e, complaintId }: { e: ThreadEvent; complaintId: string }) {
       return e.from === "student" ? (
         <Me meta={`You · ${t} · ${e.readByOther ? "Read" : "Sent"}`}>{e.body}</Me>
       ) : (
-        <Them label={e.note} meta={`DLI Student Union · ${t}`}>
+        <Them label={e.note} meta={`DLI Students' Association · ${t}`}>
           {e.body}
         </Them>
       );
     case "answer":
       return (
-        <Them tone="answer" meta={`DLI Student Union · ${t} · ${ANSWER_SOURCE[e.audience] ?? "Earlier answer"}`}>
+        <Them tone="answer" meta={`DLI Students' Association · ${t} · ${ANSWER_SOURCE[e.audience] ?? "Earlier answer"}`}>
           <b className="block">{e.subject}</b>
           {e.body}
           <span className="mt-3 block border-t border-[var(--border)] pt-2.5 [white-space:normal]">
@@ -224,7 +224,7 @@ function Event({ e, complaintId }: { e: ThreadEvent; complaintId: string }) {
               <span role="status" className="text-sm text-[var(--muted)]">
                 {e.helpful
                   ? "Glad it helped. This is now marked as resolved. If the problem comes back, you can ask for a review."
-                  : "Thanks for telling us. The Student Union team will still look at it."}
+                  : "Thanks for telling us. Write what you still need below: it goes straight to the Students' Association team, who will reply to you personally."}
               </span>
             )}
           </span>

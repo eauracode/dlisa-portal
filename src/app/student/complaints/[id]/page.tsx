@@ -61,7 +61,7 @@ export default async function ComplaintConversationPage({
           You have already submitted this same complaint recently, so it was not submitted again. Its conversation is shown here.
         </Alert>
       )}
-      {sp.review === "sent" && <Alert tone="success">Your review request has been sent to the Student Union team.</Alert>}
+      {sp.review === "sent" && <Alert tone="success">Your review request has been sent to the Students&apos; Association team.</Alert>}
 
       <div className="grid items-start gap-4 min-[1000px]:grid-cols-[minmax(0,1fr)_330px]">
         <ComplaintThread

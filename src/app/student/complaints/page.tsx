@@ -30,7 +30,7 @@ export default async function MyComplaintsPage({ searchParams }: { searchParams:
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">My complaints &amp; suggestions</h1>
-          <p className="mt-1 text-[var(--muted)]">Open one to see its conversation with the Student Union.</p>
+          <p className="mt-1 text-[var(--muted)]">Open one to see its conversation with the Students&apos; Association.</p>
         </div>
         <Link href="/student/complaints/new" className={buttonVariants()}>
           New complaint or suggestion

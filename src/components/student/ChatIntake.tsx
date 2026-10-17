@@ -99,7 +99,7 @@ async function askDepartment() {
   await bot(
     <>
       Which department are you in?
-      <span className="hint2">Saved with your username so the Union can route things to the right people. You only pick it once.</span>
+      <span className="hint2">Saved with your username so the Association can route things to the right people. You only pick it once.</span>
     </>,
   );
   const name = await ask({ kind: "chips", options: DEPARTMENTS.map((d) => d.name) });
@@ -111,7 +111,7 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
   await wait(0);
   const fd = new FormData();
   if (!opts.signedInAs) {
-    await bot("Hi! I'll help you send a complaint or suggestion to the DLI Student Union. It takes under a minute.", 150);
+    await bot("Hi! I'll help you send a complaint or suggestion to the DLI Students' Association. It takes under a minute.", 150);
     await bot("First, are you new here?");
     const c = await ask({ kind: "chips", options: ["I'm new here", "I have a username"] });
     me(c);
@@ -139,7 +139,7 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
     }
     await bot("What's it about?");
   } else {
-    await bot(`Hi ${opts.signedInAs}. What would you like to tell the Student Union about?`, 150);
+    await bot(`Hi ${opts.signedInAs}. What would you like to tell the Students' Association about?`, 150);
     if (opts.needsDepartment) {
       fd.set("department", await askDepartment());
       await bot("Thanks. What's it about?");
@@ -167,7 +167,7 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
         <br />
         <b>Details:</b> {description.length > 220 ? `${description.slice(0, 220)}…` : description}
       </span>
-      <span className="hint2">Only you and the Student Union team can read this.</span>
+      <span className="hint2">Only you and the Students&apos; Association team can read this.</span>
     </>,
   );
   const pick = await ask({ kind: "chips", options: ["Send it", "Start over"], primaryFirst: true });
@@ -211,7 +211,7 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
   update({ typing: false });
   const answers = status?.answers ?? [];
   if (answers.length) {
-    // An earlier Union answer to the same question: reply with it directly, like a live agent.
+    // An earlier Association answer to the same question: reply with it directly, like a live agent.
     for (const a of answers) await bot(a.body, 250);
     const ids = answers.map((a) => a.messageId);
     const verdict = await ask({ kind: "chips", options: ["Helpful", "Not helpful"], primaryFirst: true });
@@ -222,7 +222,7 @@ async function runChat(opts: { signedInAs: string | null; needsDepartment: boole
       return end();
     }
     await chatAnswerFeedbackAction(res.complaintId, ids, false);
-    await bot("Sorry about that. Tell me what you still need, and I'll pass it to the Student Union team.");
+    await bot("Sorry about that. Tell me what you still need. It goes straight to the Students' Association team, who will reply to you personally.");
     for (;;) {
       const more = await ask({ kind: "text", min: 1, max: 2000 });
       me(more);

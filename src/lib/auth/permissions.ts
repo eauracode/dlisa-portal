@@ -38,7 +38,7 @@ export const PERMISSIONS = {
   "messages.send_issue": ["union_admin", "case_officer"],
   "messages.send_direct": ["union_admin"],
   "messages.broadcast": ["union_admin"],
-  // Memos: Case Officers can draft; only Union Admins publish, pin, edit published memos or archive.
+  // Memos: Case Officers can draft; only Association Admins publish, pin, edit published memos or archive.
   "memos.draft": ["union_admin", "case_officer"],
   "memos.publish": ["union_admin"],
   "jobs.run": ["union_admin"],
@@ -47,8 +47,8 @@ export const PERMISSIONS = {
 export type Permission = keyof typeof PERMISSIONS;
 
 export const ROLE_LABELS: Record<AdminRole, string> = {
-  union_admin: "Union Administrator",
-  case_officer: "Union Case Officer",
+  union_admin: "Association Administrator",
+  case_officer: "Association Case Officer",
   oversight_officer: "School Management Oversight Officer",
 };
 

@@ -2,7 +2,7 @@ import { LandingHero } from "@/components/landing/LandingHero";
 
 const STEPS = [
   { title: "Chat it in", text: "Answer a few quick questions about your complaint or suggestion. No name, email or matric number." },
-  { title: "We group and act", text: "Reports of the same problem are grouped so the Student Union can act on them together." },
+  { title: "We group and act", text: "Reports of the same problem are grouped so the Students' Association can act on them together." },
   { title: "Follow the thread", text: "Every reply, update and status change lands in one conversation you can come back to." },
 ];
 

@@ -250,7 +250,7 @@ create table issue_updates (
 create index issue_updates_issue_idx on issue_updates (consolidated_issue_id, created_at desc);
 
 -- Staff-only notes. Never exposed through any student or public query.
---   internal:  Student Union staff
+--   internal:  Students' Association staff
 --   oversight: restricted school-management notes (union admins + oversight officers)
 create table administrative_notes (
   id                     uuid primary key default gen_random_uuid(),

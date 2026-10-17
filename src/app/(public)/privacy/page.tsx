@@ -7,7 +7,7 @@ export default function PrivacyPage() {
     <article className="mx-auto max-w-[640px] space-y-4 leading-relaxed">
       <h1 className="text-2xl font-semibold tracking-tight">Privacy notice</h1>
       <p>
-        This portal is run by the DLI Student Union, University of Lagos, under the oversight of school management. We only collect what&apos;s
+        This portal is run by the DLI Students&apos; Association, University of Lagos, under the oversight of school management. We only collect what&apos;s
         needed to handle your complaint or suggestion: the username you choose, your department, the category, what you write, and any
         messages you send in a complaint&apos;s chat.
       </p>
@@ -25,14 +25,14 @@ export default function PrivacyPage() {
       </p>
       <h2 className="text-base font-semibold">Who can see your submissions</h2>
       <p>
-        Only you can see your own submissions in your dashboard. Student Union staff see you as a reporter code such as &ldquo;Reporter
-        89D22E&rdquo;, not your username. A Union Administrator can send a message to a username directly, but staff are not shown which
-        reports a username made. Messages you send in a complaint&apos;s chat are read only by Student Union staff. School management oversight officers see records only for issues escalated to them. Public pages show
-        only summaries the Union has approved, with nothing that identifies anyone. Harassment and safety reports are never shown publicly.
+        Only you can see your own submissions in your dashboard. Students&apos; Association staff see you as a reporter code such as &ldquo;Reporter
+        89D22E&rdquo;, not your username. An Association Administrator can send a message to a username directly, but staff are not shown which
+        reports a username made. Messages you send in a complaint&apos;s chat are read only by Students&apos; Association staff. School management oversight officers see records only for issues escalated to them. Public pages show
+        only summaries the Association has approved, with nothing that identifies anyone. Harassment and safety reports are never shown publicly.
       </p>
       <h2 className="text-base font-semibold">Answers given before</h2>
       <p>
-        If the Student Union has already answered the same question, for example in a memo or a reply to students who reported the same
+        If the Students&apos; Association has already answered the same question, for example in a memo or a reply to students who reported the same
         problem, that answer may be shown to you straight away. Your own messages are never shown to other students.
       </p>
       <h2 className="text-base font-semibold">Automated processing</h2>

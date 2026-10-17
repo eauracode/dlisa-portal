@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { default: brand.fullName, template: `%s · ${brand.portalName}` },
-  description: "Submit academic concerns, welfare complaints and suggestions to the DLI Student Union, and follow their progress.",
+  description: "Submit academic concerns, welfare complaints and suggestions to the DLI Students' Association, and follow their progress.",
   robots: { index: false, follow: false },
   referrer: "same-origin",
 };

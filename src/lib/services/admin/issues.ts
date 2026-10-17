@@ -208,7 +208,7 @@ export async function assignOfficer(admin: AdminContext, issueId: string, office
     const issue = await loadIssueForAdmin(tx, admin, issueId, { permission: "issues.assign", forUpdate: true });
     if (officerId) {
       const officer = await one<{ id: string }>(tx, `select id from admin_users where id = $1 and active and role in ('union_admin','case_officer')`, [officerId]);
-      if (!officer) throw new ActionError("Choose an active Union Administrator or Case Officer.");
+      if (!officer) throw new ActionError("Choose an active Association Administrator or Case Officer.");
     }
     if (issue.assigned_admin_id === officerId) return;
     await tx.query(`update consolidated_issues set assigned_admin_id = $2 where id = $1`, [issueId, officerId]);
@@ -342,7 +342,7 @@ export async function publishUpdate(
       permission: type === "institutional_response" ? "issues.institutional_response" : "issues.publish_update",
       forUpdate: true,
     });
-    if (input.visibility === "public" && !can(admin.role, "issues.visibility")) throw new ActionError("Only a Union Administrator can publish public updates.");
+    if (input.visibility === "public" && !can(admin.role, "issues.visibility")) throw new ActionError("Only an Association Administrator can publish public updates.");
     if (input.visibility === "public" && issue.sensitive) throw new ActionError("Sensitive welfare issues cannot have public updates.");
     const update = await one<{ id: string }>(
       tx,
@@ -353,7 +353,7 @@ export async function publishUpdate(
     await notifyLinkedComplaints(tx, issueId, admin, {
       eventType: "update_published",
       newValue: update!.id,
-      message: type === "institutional_response" ? "School management recorded a response on this issue." : "The Student Union published an update on this issue.",
+      message: type === "institutional_response" ? "School management recorded a response on this issue." : "The Students' Association published an update on this issue.",
     });
     if (issue.status === "new") await applyStatus(tx, admin, issue, "under_review", null);
     await touch(tx, issueId);
@@ -433,7 +433,7 @@ async function applyEscalation(tx: Db, admin: AdminContext, issue: IssueRow, rea
     [issue.id, reason],
   );
   await addIssueEvent(tx, { issueId: issue.id, actorType: "admin", actorId: admin.id, eventType: "escalated", newValue: "pending", reason });
-  await notifyLinkedComplaints(tx, issue.id, admin, { eventType: "escalated", message: "The Student Union has referred this issue to school management." });
+  await notifyLinkedComplaints(tx, issue.id, admin, { eventType: "escalated", message: "The Students' Association has referred this issue to school management." });
   await touch(tx, issue.id);
   await audit(tx, { actorType: "admin", actorId: admin.id, action: "issue.escalated", entityType: "issue", entityId: issue.id });
 }

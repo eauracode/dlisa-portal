@@ -17,7 +17,7 @@ export function LandingHero() {
           <div>
             <span className="text-[13px] font-bold uppercase tracking-[.04em] text-[#F7C9D6]">Your voice matters</span>
             <h1 id="hero-title" className="mt-2.5 max-w-[16ch] text-[clamp(34px,7vw,56px)] font-extrabold leading-[1.04] tracking-[-.03em]">
-              Got a complaint or a suggestion? Tell the Student Union.
+              Got a complaint or a suggestion? Tell the Students&apos; Association.
             </h1>
             <p className="mt-4 max-w-[52ch] text-[17px] leading-relaxed text-[#F0DDE3]">
               Send a complaint or suggestion in under a minute, and get a response instantly. No more delay or waiting!
@@ -53,11 +53,11 @@ export function LandingHero() {
               <span className="grid h-9 w-9 place-items-center rounded-full bg-[#700023] text-xs font-bold text-white">DLI</span>
               <div>
                 <b>FIN 231 timetable</b>
-                <small className="block text-xs text-[#665A5D]">with DLI Student Union</small>
+                <small className="block text-xs text-[#665A5D]">with DLI Students&apos; Association</small>
               </div>
             </div>
             <div className="b m">The FIN 231 timetable isn&apos;t on the portal yet.</div>
-            <span className="pill">Added to an issue the Union is working on</span>
+            <span className="pill">Added to an issue the Association is working on</span>
             <div className="b t u">
               <b>UPDATE</b>We&apos;ve raised this with the Exams Office.
             </div>

@@ -1,6 +1,6 @@
 # DLI Student Welfare and Academic Support Portal
 
-A full-stack platform for the Distance Learning Institute (DLI), University of Lagos. Students submit academic concerns, welfare complaints, suggestions and feedback using only a self-chosen **username** (no password, PIN or personal details). The DLI Student Union executive manages, groups and resolves them under school-management oversight.
+A full-stack platform for the Distance Learning Institute (DLI), University of Lagos. Students submit academic concerns, welfare complaints, suggestions and feedback using only a self-chosen **username** (no password, PIN or personal details). The DLI Students' Association executive manages, groups and resolves them under school-management oversight.
 
 - **Students:** submit complaints, follow progress privately, see published responses and confirmed resolution dates, and request a review if a "resolved" problem persists.
 - **Staff:** consolidate duplicate reports into issues, prioritise, assign, set deadlines, publish updates, escalate to school management, and audit everything.
@@ -47,7 +47,7 @@ npm run dev                     # http://localhost:3000
 npm run worker                  # separate terminal: matching retries and maintenance
 ```
 
-Demo logins come from `npm run db:seed`. Students sign in at `/student/access` with just a username (for example `quiet_owl`). Staff sign in at `/admin/login` with the three printed accounts: Union Administrator, Case Officer and Oversight Officer. Seed passwords are random on every run, and the seed refuses to run in production or on a database that already contains students.
+Demo logins come from `npm run db:seed`. Students sign in at `/student/access` with just a username (for example `quiet_owl`). Staff sign in at `/admin/login` with the three printed accounts: Association Administrator, Case Officer and Oversight Officer. Seed passwords are random on every run, and the seed refuses to run in production or on a database that already contains students.
 
 ### Scripts
 
@@ -142,11 +142,11 @@ tests/                   unit/, integration/, support/
 
 All thresholds are editable in **Admin → Settings**. They are tuning values for the configured embedding model, not probabilities.
 
-**Priority** (`lib/priority/engine.ts`): severity (0–45 points) + distinct reporters (log-scaled, capped at 30) + repeats from the same student (capped at 5) + 24-hour growth + days unresolved + overdue deadline + academic impact. Thresholds give Normal, Elevated, High or Critical. Safety and welfare flags force at least High, or Critical if urgent. Union administrators can override with a recorded reason, and AI only recommends.
+**Priority** (`lib/priority/engine.ts`): severity (0–45 points) + distinct reporters (log-scaled, capped at 30) + repeats from the same student (capped at 5) + 24-hour growth + days unresolved + overdue deadline + academic impact. Thresholds give Normal, Elevated, High or Critical. Safety and welfare flags force at least High, or Critical if urgent. Association administrators can override with a recorded reason, and AI only recommends.
 
 ### Roles
 
-| Permission | Union Administrator | Case Officer | Oversight Officer |
+| Permission | Association Administrator | Case Officer | Oversight Officer |
 | --- | :-: | :-: | :-: |
 | Which issues | all | assigned only | escalated only |
 | Staff accounts, settings, categories, audit log | ✓ | | |
@@ -253,14 +253,14 @@ Staff send messages from **Admin → Messages**, and students read them in their
 
 | Audience | How to send | Who can send |
 | --- | --- | --- |
-| Everyone who reported a grouped issue | Messages → "Reporters of a grouped issue", or **"Message all reporters"** on an issue page | Union Administrator; Case Officer (assigned issues only) |
-| One student by username | Messages → "A specific username" (case-insensitive) | Union Administrator |
-| The author of one complaint | **"Message this reporter"** on a submission page. The username is never shown to staff. | Union Administrator; Case Officer (assigned issues only) |
-| All students (memo) | Messages → "All students", with a confirmation tick | Union Administrator |
+| Everyone who reported a grouped issue | Messages → "Reporters of a grouped issue", or **"Message all reporters"** on an issue page | Association Administrator; Case Officer (assigned issues only) |
+| One student by username | Messages → "A specific username" (case-insensitive) | Association Administrator |
+| The author of one complaint | **"Message this reporter"** on a submission page. The username is never shown to staff. | Association Administrator; Case Officer (assigned issues only) |
+| All students (memo) | Messages → "All students", with a confirmation tick | Association Administrator |
 
 - **Recipients are fixed at send time:** only active student accounts receive a message, and a student who reported an issue several times gets it once.
-- **Students see "DLI Student Union" as the sender,** never the staff member's name or the other recipients. Database row-level security guarantees a student can only read messages addressed to them.
-- **The history shows delivery and read counts.** Union Administrators see every message; Case Officers see the messages they sent.
+- **Students see "DLI Students' Association" as the sender,** never the staff member's name or the other recipients. Database row-level security guarantees a student can only read messages addressed to them.
+- **The history shows delivery and read counts.** Association Administrators see every message; Case Officers see the messages they sent.
 - **The audit log records every send** (audience, recipient count), never the message text.
 - **Database:** `db/migrations/0004_student_messages.sql`, which only adds tables.
 
@@ -297,7 +297,7 @@ Before any external call, emails, phone numbers, long digit runs (such as matric
 
 1. **Database:** in the Vercel project, Storage → Create Database → **Neon**, region **London** (`aws-eu-west-2`) to sit next to the app's `lhr1` region (set in `vercel.json`). Use the **pooled** connection string (host contains `-pooler`) as `DATABASE_URL`, and set `DATABASE_SSL=true`.
 2. **Schema:** from a trusted machine, run `npm run db:migrate` with `DATABASE_URL` pointing at Neon. The migrations create the `portal_student` and `portal_public` roles (row-level security) and grant them to the connecting role; Neon's owner role is allowed to do this.
-3. **First administrator:** `npm run admin:create -- --email chair@example.org --name "Union Chair" --role union_admin`. There are no default credentials; the account must change its password at first login.
+3. **First administrator:** `npm run admin:create -- --email chair@example.org --name "Association Chair" --role union_admin`. There are no default credentials; the account must change its password at first login.
 4. **Environment variables** (Vercel → Settings → Environment Variables): `DATABASE_URL`, `DATABASE_SSL=true`, `APP_SECRET` (32+ random characters), `CRON_SECRET` (16+), `AI_EMBEDDING_PROVIDER=transformers`, `AI_CLASSIFIER_PROVIDER=local`. Leave `MODEL_CACHE_DIR` and `TRUSTED_PROXY_COUNT` unset: on Vercel the model is cached in `/tmp/dli-models` (re-downloaded, ~23 MB, after a cold start) and Vercel's `X-Forwarded-For` holds only the visitor's address.
 5. **Function size:** the embedding runtime ships binaries for every platform (~290 MB). `next.config.ts` keeps only the Linux x64 binary in each function (~68 MB traced), well under Vercel's 250 MB limit.
 6. **Background work:** matching runs right after each submission (`after()`). `vercel.json` also schedules `GET /api/jobs/process` daily as a safety net (Vercel Cron sends `Authorization: Bearer $CRON_SECRET`; the Hobby plan allows daily schedules only).

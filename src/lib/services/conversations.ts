@@ -7,7 +7,7 @@ import { ActionError, NotFoundError, reporterLabel, type AdminContext } from "./
 import { issueDepartmentCounts, reporterDepartment } from "./admin/departments";
 
 /*
- * The two-way conversation on a complaint: its owner and Union staff. Staff only ever see a
+ * The two-way conversation on a complaint: its owner and Association staff. Staff only ever see a
  * reporter code; students never see which staff member replied.
  */
 
@@ -95,6 +95,8 @@ export interface ConversationRow {
   last_from: "student" | "staff";
   last_at: Date;
   unread: number;
+  /** The student said an earlier answer was not helpful and is waiting for a personal reply. */
+  needs_personal_reply: boolean;
 }
 
 /** Complaints with chat messages, unread first. Case officers see their assigned issues only. */
@@ -104,14 +106,21 @@ export async function listConversations(db: Db, admin: AdminContext, limit = 100
   const list = await rows<Omit<ConversationRow, "reporter" | "department"> & { student_id: string; department_code: string | null; sensitive: boolean | null }>(
     db,
     `select c.id as complaint_id, c.student_id, c.department_code, c.subject, i.id as issue_id, i.title as issue_title, i.sensitive,
-            last.body as last_body, last.sender_type as last_from, last.created_at as last_at,
-            (select count(*)::int from complaint_messages u where u.complaint_id = c.id and u.sender_type = 'student' and u.read_by_staff_at is null) as unread
+            coalesce(last.body, 'Said an earlier answer was not helpful') as last_body,
+            coalesce(last.sender_type, 'student') as last_from,
+            greatest(last.created_at, nh.feedback_at) as last_at,
+            (select count(*)::int from complaint_messages u where u.complaint_id = c.id and u.sender_type = 'student' and u.read_by_staff_at is null) as unread,
+            exists (select 1 from instant_answers na where na.complaint_id = c.id and na.helpful = false
+                   and not exists (select 1 from complaint_messages sr where sr.complaint_id = c.id and sr.sender_type = 'staff' and sr.created_at > na.feedback_at)) as needs_personal_reply
        from complaints c
        left join consolidated_issues i on i.id = c.consolidated_issue_id
-       join lateral (select body, sender_type, created_at from complaint_messages m where m.complaint_id = c.id order by created_at desc limit 1) last on true
-      where ${scoped}
-      order by (select count(*) from complaint_messages u where u.complaint_id = c.id and u.sender_type = 'student' and u.read_by_staff_at is null) > 0 desc,
-               last.created_at desc
+       left join lateral (select body, sender_type, created_at from complaint_messages m where m.complaint_id = c.id order by created_at desc limit 1) last on true
+       left join lateral (select max(feedback_at) as feedback_at from instant_answers na where na.complaint_id = c.id and na.helpful = false) nh on true
+      where (last.created_at is not null or nh.feedback_at is not null) and ${scoped}
+      order by (exists (select 1 from instant_answers na where na.complaint_id = c.id and na.helpful = false
+                   and not exists (select 1 from complaint_messages sr where sr.complaint_id = c.id and sr.sender_type = 'staff' and sr.created_at > na.feedback_at))) desc,
+               (select count(*) from complaint_messages u where u.complaint_id = c.id and u.sender_type = 'student' and u.read_by_staff_at is null) > 0 desc,
+               greatest(last.created_at, nh.feedback_at) desc
       limit $1`,
     admin.role === "union_admin" ? [limit] : [limit, admin.id],
   );
@@ -131,6 +140,7 @@ export interface StaffConversation {
   subject: string;
   status: string;
   issue: { id: string; title: string; status: string } | null;
+  needs_personal_reply: boolean;
   messages: Array<{ id: string; sender_type: "student" | "staff"; body: string; is_review_request: boolean; created_at: Date; author: string | null; read: boolean }>;
 }
 
@@ -148,6 +158,8 @@ export async function getStaffConversation(admin: AdminContext, complaintId: str
     );
     await tx.query(`update complaint_messages set read_by_staff_at = now() where complaint_id = $1 and sender_type = 'student' and read_by_staff_at is null`, [complaintId]);
     const counts = issue ? await issueDepartmentCounts(tx, issue.id) : [];
+    const flag = await one<{ v: boolean }>(tx, `select exists (select 1 from instant_answers na where na.complaint_id = $1 and na.helpful = false
+                   and not exists (select 1 from complaint_messages sr where sr.complaint_id = $1 and sr.sender_type = 'staff' and sr.created_at > na.feedback_at)) as v`, [complaintId]);
     return {
       complaint_id: complaint.id,
       reporter: reporterLabel(complaint.student_id),
@@ -155,6 +167,7 @@ export async function getStaffConversation(admin: AdminContext, complaintId: str
       subject: complaint.subject,
       status: complaint.status,
       issue: issue ? { id: issue.id, title: issue.title, status: issue.status } : null,
+      needs_personal_reply: !!flag?.v,
       messages: messages.map(({ read_by_student_at, read_by_staff_at, ...m }) => ({
         ...m,
         read: m.sender_type === "staff" ? !!read_by_student_at : !!read_by_staff_at,
@@ -178,9 +191,13 @@ export async function countUnreadForStaff(db: Db, admin: AdminContext): Promise<
   const scoped = admin.role === "union_admin" ? "true" : "i.assigned_admin_id = $1";
   const r = await one<{ n: number }>(
     db,
-    `select count(*)::int as n from complaint_messages m join complaints c on c.id = m.complaint_id
-       left join consolidated_issues i on i.id = c.consolidated_issue_id
-      where m.sender_type = 'student' and m.read_by_staff_at is null and ${scoped}`,
+    `select (select count(*)::int from complaint_messages m join complaints c on c.id = m.complaint_id
+               left join consolidated_issues i on i.id = c.consolidated_issue_id
+              where m.sender_type = 'student' and m.read_by_staff_at is null and ${scoped})
+          + (select count(*)::int from complaints c left join consolidated_issues i on i.id = c.consolidated_issue_id
+              where ${scoped} and exists (select 1 from instant_answers na where na.complaint_id = c.id and na.helpful = false
+                   and not exists (select 1 from complaint_messages sr where sr.complaint_id = c.id and sr.sender_type = 'staff' and sr.created_at > na.feedback_at))
+                and not exists (select 1 from complaint_messages u where u.complaint_id = c.id and u.sender_type = 'student' and u.read_by_staff_at is null)) as n`,
     admin.role === "union_admin" ? [] : [admin.id],
   );
   return r!.n;

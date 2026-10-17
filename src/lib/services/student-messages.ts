@@ -23,7 +23,7 @@ const AWAITING_ASSESSMENT = new Set(["new", "under_review"]);
  */
 export function studentStatusMessage({ matchStatus, complaintStatus, issue }: StudentStatusInput): StudentStatusMessage | null {
   if (complaintStatus === "review_requested") {
-    return { tone: "warning", text: "You have requested a review of this complaint. The Student Union team will look at it again and respond here." };
+    return { tone: "warning", text: "You have requested a review of this complaint. The Students' Association team will look at it again and respond here." };
   }
   if (complaintStatus === "resolved" || complaintStatus === "closed") return { tone: "success", text: COPY.resolved };
   if (matchStatus === "pending") {
@@ -31,7 +31,7 @@ export function studentStatusMessage({ matchStatus, complaintStatus, issue }: St
   }
   if (matchStatus === "pending_review") return { tone: "info", text: COPY.awaitingReview };
   if (matchStatus === "failed" || !issue) {
-    return { tone: "info", text: "Your submission has been received and will be reviewed by the Student Union team." };
+    return { tone: "info", text: "Your submission has been received and will be reviewed by the Students' Association team." };
   }
 
   if (issue.status === "resolved" || issue.status === "closed") return { tone: "success", text: COPY.resolved };
@@ -61,7 +61,7 @@ export function studentStatusMessage({ matchStatus, complaintStatus, issue }: St
   if (AWAITING_ASSESSMENT.has(issue.status)) {
     return {
       tone: "info",
-      text: "Your concern matches an issue other students have already reported. Your submission has been added to it, and the issue is awaiting assessment by the Student Union team. You can follow updates from this page.",
+      text: "Your concern matches an issue other students have already reported. Your submission has been added to it, and the issue is awaiting assessment by the Students' Association team. You can follow updates from this page.",
     };
   }
   return { tone: "info", text: COPY.matchedExisting };
